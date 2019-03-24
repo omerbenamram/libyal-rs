@@ -1,76 +1,135 @@
+use crate::error::LibfsntfsError;
 use crate::file_entry::FileEntry;
 use crate::libfsntfs::*;
+use std::ffi::CString;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::ptr;
+use std::os::raw::c_int;
+use crate::ffi::AsFFIPtr;
 
 pub struct Volume {
     volume: isize,
 }
 
+impl_as_ffi_ptr!(isize, Volume);
+
+pub enum AccessMode {
+    Read,
+    Write,
+}
+
+impl AccessMode {
+    fn as_flag(&self) -> LIBFSNTFS_ACCESS_FLAGS {
+        match self {
+            AccessMode::Read => LIBFSNTFS_ACCESS_FLAGS_LIBFSNTFS_ACCESS_FLAG_READ,
+            AccessMode::Write => LIBFSNTFS_ACCESS_FLAGS_LIBFSNTFS_ACCESS_FLAG_WRITE,
+        }
+    }
+}
+
 pub type MftEntryIndex = u64;
 
 impl Volume {
-    /// Opens a volume.
-    fn open(self, filename: impl AsRef<&str>, mode: &str) {
-        unimplemented!();
-    }
+    /// Opens a volume by filename. will panic if filename contains a nul byte.
+    pub fn open(filename: impl AsRef<str>, mode: &AccessMode) -> Result<Self, LibfsntfsError> {
+        let mut handle = 0;
+        let mut c_string = CString::new(filename).expect("Should not contain NUL");
+        let mut error = LibfsntfsError::new();
 
-    /// Closes a volume.
-    fn close(self) {
-        unimplemented!();
-    }
-
-    /// Retrieves a specific file entry.
-    fn get_file_entry(self, idx: MftEntryIndex) -> Result<FileEntry> {
-        let mut file_entry = 0;
-        let mut error = ptr::null_mut();
         unsafe {
-            libfsntfs_volume_get_file_entry_by_index(
-                &mut self.volume as *mut _,
-                idx,
-                &mut file_entry as *mut _,
-                &mut error as *mut _,
+            libfsntfs_volume_open(
+                &mut handle as *mut _,
+                c_string.as_ptr(),
+                mode.as_flag() as c_int,
+                error.as_ffi_ptr(),
             );
         }
 
-        if error.is_null() {
-            Ok(FileEntry { file_entry })
+        if !error.is_error() {
+            Ok(Volume {
+                volume: handle
+            })
+        } else {
+            Err(error)
         }
     }
 
     /// Retrieves a file entry specified by the path.
-    fn get_file_entry_by_path(self, path: impl AsRef<Path>) {
+    pub fn get_file_entry_by_path(&self, path: impl AsRef<Path>) -> Result<FileEntry, LibfsntfsError> {
+        let mut file_entry = 0;
+        let mut error = LibfsntfsError::new();
+
+        unsafe {
+            libfsntfs_volume_get_file_entry_by_utf8_path(
+                self.as_ffi_ptr(),
+                path.as_ref().as_os_str().as_bytes().as_ptr(),
+                path.as_ref().as_os_str().as_bytes().len(),
+                file_entry.as_ffi_ptr(),
+                error.as_ffi_ptr(),
+            );
+        }
+
+        if error.is_error() {
+            Ok(FileEntry { file_entry })
+        } else {
+            Err(error)
+        }
+    }
+
+    /// Retrieves a specific file entry.
+    pub fn get_file_entry_by_mft_idx(&self, idx: MftEntryIndex) -> Result<FileEntry, LibfsntfsError> {
+        let mut file_entry: isize = 0;
+        let mut error = LibfsntfsError::new();
+
+        unsafe {
+            libfsntfs_volume_get_file_entry_by_index(
+                &mut self.volume.clone() as *mut _,
+                idx,
+                file_entry.as_ffi_ptr(),
+                error.as_ffi_ptr(),
+            );
+        }
+
+        if error.is_error() {
+            Ok(FileEntry { file_entry })
+        } else {
+            Err(error)
+        }
+    }
+
+    /// Closes a volume.
+    fn close(&self) {
         unimplemented!();
     }
 
     /// Retrieves the name.
-    fn get_name(self) {
+    fn get_name(&self) {
         unimplemented!();
     }
 
     /// Retrieves the number of file entries.
-    fn get_number_of_file_entries(self) {
+    fn get_number_of_file_entries(&self) {
         unimplemented!();
     }
 
     /// Retrieves the root directory.
-    fn get_root_directory(self) {
+    fn get_root_directory(&self) {
         unimplemented!();
     }
 
     /// Retrieves the USN change journal.
-    fn get_usn_change_journal(self) {
+    fn get_usn_change_journal(&self) {
         unimplemented!();
     }
 
     /// Opens a volume using a file-like object.
-    fn open_file_object(self, file_object: File, mode: &str) {
+    fn open_file_object(&self, file_object: File, mode: &str) {
         unimplemented!();
     }
 
     /// Signals the volume to abort the current activity.
-    fn signal_abort(self) {
+    fn signal_abort(&self) {
         unimplemented!();
     }
 }
@@ -78,7 +137,7 @@ impl Volume {
 impl Drop for Volume {
     fn drop(&mut self) {
         unsafe {
-            libfsntfs_volume_free(&mut self.volume as *mut _, ptr::null_mut());
+            libfsntfs_volume_free(self.as_ffi_ptr(), ptr::null_mut());
         }
     }
 }

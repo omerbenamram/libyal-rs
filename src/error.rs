@@ -1,13 +1,27 @@
+use crate::ffi::AsFFIPtr;
 use crate::libfsntfs::*;
 use std::fmt::{self, Display, Formatter};
+use std::ops::{Deref, DerefMut};
 
 pub struct LibfsntfsError {
     code: isize,
 }
 
+impl LibfsntfsError {
+    pub fn new() -> Self {
+        LibfsntfsError { code: 0 }
+    }
+
+    pub fn is_error(&self) -> bool {
+        self.code == 0
+    }
+}
+
+impl_as_ffi_ptr!(isize, LibfsntfsError);
+
 impl Drop for LibfsntfsError {
     fn drop(&mut self) {
-        unsafe { libfsntfs_error_free(&mut self.code as *mut _) };
+        unsafe { libfsntfs_error_free(self.as_ffi_ptr()) };
     }
 }
 
