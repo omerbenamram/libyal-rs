@@ -10,3 +10,7 @@ chrono = "0.4.6"
 
 [build-dependencies]
 autotools = "0.2"
+
+[[example]]
+name = "file_attributes"
+path = "examples/file_attributes.rs"

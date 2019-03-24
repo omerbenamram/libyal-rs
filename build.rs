@@ -16,5 +16,6 @@ fn main() {
 //        .expect("autogen failed");
 //
 //    let dst = autotools::Config::new("libfsntfs").reconf("--install").build();
+    println!("cargo:rustc-link-lib=dylib=libfsntfs");
     println!("cargo:rustc-link-search=native=./libfsntfs");
 }

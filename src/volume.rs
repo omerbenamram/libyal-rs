@@ -1,18 +1,18 @@
 use crate::error::LibfsntfsError;
+use crate::ffi::AsFFIPtr;
 use crate::file_entry::FileEntry;
 use crate::libfsntfs::*;
 use std::ffi::CString;
 use std::fs::File;
+use std::os::raw::c_int;
 use std::path::{Path, PathBuf};
 use std::ptr;
-use std::os::raw::c_int;
-use crate::ffi::AsFFIPtr;
 
 pub struct Volume {
     volume: isize,
 }
 
-impl_as_ffi_ptr!(isize, Volume);
+impl_as_ffi_ptr!(isize, volume, Volume);
 
 pub enum AccessMode {
     Read,
@@ -34,7 +34,7 @@ impl Volume {
     /// Opens a volume by filename. will panic if filename contains a nul byte.
     pub fn open(filename: impl AsRef<str>, mode: &AccessMode) -> Result<Self, LibfsntfsError> {
         let mut handle = 0;
-        let mut c_string = CString::new(filename).expect("Should not contain NUL");
+        let mut c_string = CString::new(filename.as_ref()).expect("Should not contain NUL");
         let mut error = LibfsntfsError::new();
 
         unsafe {
@@ -47,24 +47,27 @@ impl Volume {
         }
 
         if !error.is_error() {
-            Ok(Volume {
-                volume: handle
-            })
+            Ok(Volume { volume: handle })
         } else {
             Err(error)
         }
     }
 
     /// Retrieves a file entry specified by the path.
-    pub fn get_file_entry_by_path(&self, path: impl AsRef<Path>) -> Result<FileEntry, LibfsntfsError> {
+    pub fn get_file_entry_by_path(
+        &self,
+        path: impl AsRef<Path>,
+    ) -> Result<FileEntry, LibfsntfsError> {
         let mut file_entry = 0;
         let mut error = LibfsntfsError::new();
 
+        let path_as_str = path.as_ref().to_str().expect("should be a valid UTF8");
+
         unsafe {
             libfsntfs_volume_get_file_entry_by_utf8_path(
-                self.as_ffi_ptr(),
-                path.as_ref().as_os_str().as_bytes().as_ptr(),
-                path.as_ref().as_os_str().as_bytes().len(),
+                &mut self.volume.clone() as *mut _,
+                path_as_str.as_ptr(),
+                path_as_str.len(),
                 file_entry.as_ffi_ptr(),
                 error.as_ffi_ptr(),
             );
@@ -78,7 +81,10 @@ impl Volume {
     }
 
     /// Retrieves a specific file entry.
-    pub fn get_file_entry_by_mft_idx(&self, idx: MftEntryIndex) -> Result<FileEntry, LibfsntfsError> {
+    pub fn get_file_entry_by_mft_idx(
+        &self,
+        idx: MftEntryIndex,
+    ) -> Result<FileEntry, LibfsntfsError> {
         let mut file_entry: isize = 0;
         let mut error = LibfsntfsError::new();
 

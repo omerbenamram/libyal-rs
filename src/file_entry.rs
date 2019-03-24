@@ -6,10 +6,10 @@ use std::ptr;
 use crate::ffi::AsFFIPtr;
 
 pub struct FileEntry {
-    file_entry: isize,
+    pub file_entry: isize,
 }
 
-impl_as_ffi_ptr!(isize, FileEntry);
+impl_as_ffi_ptr!(isize, file_entry, FileEntry);
 
 impl FileEntry {
     /// Returns the access date and time.
@@ -197,6 +197,6 @@ impl FileEntry {
 
 impl Drop for FileEntry {
     fn drop(&mut self) {
-        unsafe { libfsntfs_file_entry_free(&mut &self.file_entry as *mut _, ptr::null_mut()) };
+        unsafe { libfsntfs_file_entry_free(self.as_ffi_ptr(), ptr::null_mut()) };
     }
 }
