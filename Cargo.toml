@@ -6,3 +6,7 @@ edition = "2018"
 links = "libfsntfs"
 
 [dependencies]
+chrono = "0.4.6"
+
+[build-dependencies]
+autotools = "0.2"
