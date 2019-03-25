@@ -1,10 +1,10 @@
 use chrono::prelude::*;
 
-use std::convert::TryFrom;
 use crate::error::Error;
 use crate::ffi::AsTypeRef;
 use crate::ffi_error::{LibfsntfsError, LibfsntfsErrorRef};
 use crate::libfsntfs::{libfsntfs_attribute_t, libfsntfs_data_stream_t, off64_t, size64_t};
+use std::convert::TryFrom;
 use std::ffi::c_void;
 use std::os::raw::c_int;
 use std::{mem, ptr};
@@ -387,18 +387,11 @@ impl FileEntry {
         let mut size = 0;
         let mut error = ptr::null_mut();
 
-        unsafe {
-            libfsntfs_file_entry_get_size(
-                self.as_type_ref(),
-                &mut size as *mut _,
-                &mut error,
-            );
-        }
-
-        if !error.is_null() {
-            Ok(size)
-        } else {
+        if unsafe { libfsntfs_file_entry_get_size(self.as_type_ref(), &mut size, &mut error) } != 1
+        {
             Err(Error::try_from(error)?)
+        } else {
+            Ok(size)
         }
     }
 
