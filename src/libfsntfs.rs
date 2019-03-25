@@ -3384,40 +3384,6 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
-    #[link_name = "\u{1}_libfsntfs_error_free"]
-    pub fn libfsntfs_error_free(error: *mut *mut libfsntfs_error_t);
-}
-extern "C" {
-    #[link_name = "\u{1}_libfsntfs_error_fprint"]
-    pub fn libfsntfs_error_fprint(
-        error: *mut libfsntfs_error_t,
-        stream: *mut FILE,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    #[link_name = "\u{1}_libfsntfs_error_sprint"]
-    pub fn libfsntfs_error_sprint(
-        error: *mut libfsntfs_error_t,
-        string: *mut ::std::os::raw::c_char,
-        size: usize,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    #[link_name = "\u{1}_libfsntfs_error_backtrace_fprint"]
-    pub fn libfsntfs_error_backtrace_fprint(
-        error: *mut libfsntfs_error_t,
-        stream: *mut FILE,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    #[link_name = "\u{1}_libfsntfs_error_backtrace_sprint"]
-    pub fn libfsntfs_error_backtrace_sprint(
-        error: *mut libfsntfs_error_t,
-        string: *mut ::std::os::raw::c_char,
-        size: usize,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
     #[link_name = "\u{1}_libfsntfs_attribute_free"]
     pub fn libfsntfs_attribute_free(
         attribute: *mut *mut libfsntfs_attribute_t,

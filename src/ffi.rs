@@ -1,7 +1,9 @@
-pub trait AsFFIPtr {
+use std::mem;
+
+pub trait AsTypeRef {
     type Ref;
 
-    fn as_ffi_ptr(&mut self) -> Self::Ref;
+    fn as_type_ref(&mut self) -> Self::Ref;
 }
 
 
@@ -20,13 +22,19 @@ macro_rules! declare_ffi_type {
 #[macro_export]
 macro_rules! impl_ffi_type {
     ($ty:ident, $ty_ref:ident) => {
-        impl $crate::ffi::AsFFIPtr for $ty {
+        impl $crate::ffi::AsTypeRef for $ty {
             type Ref = $ty_ref;
 
             #[inline]
-            fn as_ffi_ptr(&mut self) -> Self::Ref {
+            fn as_type_ref(&mut self) -> Self::Ref {
                 self.0
            }
+        }
+
+        impl $ty {
+            pub fn wrap_ptr(ptr: *mut $ty_ref) -> $ty {
+               unsafe { mem::transmute::<*mut $ty_ref, $ty>(ptr) }
+            }
         }
     }
 }

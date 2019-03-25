@@ -1,16 +1,22 @@
-use crate::error::{Error};
-use crate::ffi::AsFFIPtr;
-use crate::file_entry::FileEntry;
-use std::ffi::{CString, c_void};
+use crate::error::Error;
+use crate::ffi::AsTypeRef;
+use crate::ffi_error::{LibfsntfsError, LibfsntfsErrorRef};
+use crate::file_entry::{FileEntry, FileEntryRef};
+use crate::libfsntfs::{
+    libfsntfs_file_entry_t, size32_t, LIBFSNTFS_ACCESS_FLAGS,
+    LIBFSNTFS_ACCESS_FLAGS_LIBFSNTFS_ACCESS_FLAG_READ,
+    LIBFSNTFS_ACCESS_FLAGS_LIBFSNTFS_ACCESS_FLAG_WRITE,
+};
+use std::convert::TryFrom;
+use std::ffi::{c_void, CString};
 use std::fs::File;
 use std::os::raw::c_int;
 use std::path::{Path, PathBuf};
 use std::ptr;
-use crate::ffi_error::{LibfsntfsError, LibfsntfsErrorRef};
-use crate::libfsntfs::{libfsntfs_file_entry_t, LIBFSNTFS_ACCESS_FLAGS, LIBFSNTFS_ACCESS_FLAGS_LIBFSNTFS_ACCESS_FLAG_READ, size32_t, LIBFSNTFS_ACCESS_FLAGS_LIBFSNTFS_ACCESS_FLAG_WRITE};
+use std::mem;
 
 #[repr(C)]
-struct __Volume(c_void);
+pub struct __Volume(isize);
 
 pub type VolumeRef = *mut __Volume;
 
@@ -122,13 +128,13 @@ extern "C" {
     pub fn libfsntfs_volume_get_file_entry_by_index(
         volume: VolumeRef,
         mft_entry_index: u64,
-        file_entry: *mut *mut libfsntfs_file_entry_t,
+        file_entry: *mut FileEntryRef,
         error: *mut LibfsntfsErrorRef,
     ) -> ::std::os::raw::c_int;
     #[link_name = "\u{1}_libfsntfs_volume_get_root_directory"]
     pub fn libfsntfs_volume_get_root_directory(
         volume: VolumeRef,
-        file_entry: *mut *mut libfsntfs_file_entry_t,
+        file_entry: *mut FileEntryRef,
         error: *mut LibfsntfsErrorRef,
     ) -> ::std::os::raw::c_int;
     #[link_name = "\u{1}_libfsntfs_volume_get_file_entry_by_utf8_path"]
@@ -136,7 +142,7 @@ extern "C" {
         volume: VolumeRef,
         utf8_string: *const u8,
         utf8_string_length: usize,
-        file_entry: *mut *mut libfsntfs_file_entry_t,
+        file_entry: *mut FileEntryRef,
         error: *mut LibfsntfsErrorRef,
     ) -> ::std::os::raw::c_int;
     #[link_name = "\u{1}_libfsntfs_volume_get_file_entry_by_utf16_path"]
@@ -144,7 +150,7 @@ extern "C" {
         volume: VolumeRef,
         utf16_string: *const u16,
         utf16_string_length: usize,
-        file_entry: *mut *mut libfsntfs_file_entry_t,
+        file_entry: *mut FileEntryRef,
         error: *mut LibfsntfsErrorRef,
     ) -> ::std::os::raw::c_int;
 }
@@ -168,74 +174,70 @@ pub type MftEntryIndex = u64;
 impl Volume {
     /// Opens a volume by filename. will panic if filename contains a nul byte.
     pub fn open(filename: impl AsRef<str>, mode: &AccessMode) -> Result<Self, Error> {
-        let mut handle: Volume = ptr::null_mut();
+        let mut handle = ptr::null_mut();
         let mut c_string = CString::new(filename.as_ref()).expect("Should not contain NUL");
-        let mut error: LibfsntfsError = ptr::null_mut();
+        let mut init_error = ptr::null_mut();
 
-        unsafe {
-            libfsntfs_volume_open(
-                handle.as_ffi_ptr(),
-                c_string.as_ptr(),
-                mode.as_flag() as c_int,
-                error.as_ffi_ptr(),
-            );
+        if unsafe { libfsntfs_volume_initialize(handle, init_error) } != 1 {
+            return Err(Error::try_from(init_error)?);
         }
 
-        if error.is_null() {
-            Ok(handle)
+        let mut volume = Volume::wrap_ptr(handle);
+
+        let mut error = ptr::null_mut();
+
+        if unsafe {
+            libfsntfs_volume_open(
+                volume.as_type_ref(),
+                c_string.as_ptr(),
+                mode.as_flag() as c_int,
+                error,
+            )
+        } != 1
+        {
+            Err(Error::try_from(error)?)
         } else {
-            Err(Error::ffi(error))
+            Ok(volume)
         }
     }
 
     /// Retrieves a file entry specified by the path.
-    pub fn get_file_entry_by_path(
-        &self,
-        path: impl AsRef<Path>,
-    ) -> Result<FileEntry, Error> {
-        let mut file_entry: FileEntry = ptr::null_mut();
-        let mut error: LibfsntfsError = ptr::null_mut();
+    pub fn get_file_entry_by_path(&mut self, path: impl AsRef<Path>) -> Result<FileEntry, Error> {
+        let mut file_entry = ptr::null_mut();
+        let mut error = ptr::null_mut();
 
         let path_as_str = path.as_ref().to_str().expect("should be a valid UTF8");
 
         unsafe {
             libfsntfs_volume_get_file_entry_by_utf8_path(
-                self.as_ffi_ptr(),
+                self.as_type_ref(),
                 path_as_str.as_ptr(),
                 path_as_str.len(),
-                file_entry.as_ffi_ptr(),
-                error.as_ffi_ptr(),
-            );
-        }
-
-        if error.is_null() {
-            Ok(file_entry)
-        } else {
-            Err(Error::ffi(error))
-        }
-    }
-
-    /// Retrieves a specific file entry.
-    pub fn get_file_entry_by_mft_idx(
-        &self,
-        idx: MftEntryIndex,
-    ) -> Result<FileEntry, Error> {
-        let mut file_entry = ptr::null_mut();
-        let mut error = ptr::null_mut();
-
-        unsafe {
-            libfsntfs_volume_get_file_entry_by_index(
-                self.as_ffi_ptr(),
-                idx,
-                file_entry.as_ffi_ptr(),
+                file_entry,
                 error,
             );
         }
 
         if error.is_null() {
-            Ok(file_entry)
+            Ok(FileEntry::wrap_ptr(file_entry))
         } else {
-            Err(Error::ffi(error))
+            Err(Error::try_from(error)?)
+        }
+    }
+
+    /// Retrieves a specific file entry.
+    pub fn get_file_entry_by_mft_idx(&mut self, idx: MftEntryIndex) -> Result<FileEntry, Error> {
+        let mut file_entry = ptr::null_mut();
+        let mut error = ptr::null_mut();
+
+        unsafe {
+            libfsntfs_volume_get_file_entry_by_index(self.as_type_ref(), idx, file_entry, error);
+        }
+
+        if error.is_null() {
+            Ok(FileEntry::wrap_ptr(file_entry))
+        } else {
+            Err(Error::try_from(error)?)
         }
     }
 
@@ -278,7 +280,7 @@ impl Volume {
 impl Drop for Volume {
     fn drop(&mut self) {
         unsafe {
-            libfsntfs_volume_free(self.as_ffi_ptr(), ptr::null_mut());
+            libfsntfs_volume_free(&mut self.as_type_ref() as *mut _, ptr::null_mut());
         }
     }
 }
