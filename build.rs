@@ -6,16 +6,40 @@ use std::process::{Command, Stdio};
 fn main() {
 //    let script_dir = env::current_dir().expect("Failed to get current_dir");
 //    let libfsntfs = script_dir.join("libfsntfs");
+//    let target = libfsntfs.join("dist");
 //
 //    Command::new("sh")
 //        .arg("autogen.sh")
-//        .current_dir(libfsntfs)
+//        .current_dir(&libfsntfs)
 //        .stderr(Stdio::inherit())
 //        .stdout(Stdio::inherit())
 //        .spawn()
 //        .expect("autogen failed");
 //
-//    let dst = autotools::Config::new("libfsntfs").reconf("--install").build();
-    println!("cargo:rustc-link-lib=dylib=libfsntfs");
-    println!("cargo:rustc-link-search=native=./libfsntfs");
+//    Command::new("sh")
+//        .arg("configure")
+//        .arg("--enable-shared=no")
+//        .arg(format!("--prefix={}", target.to_str().unwrap()))
+//        .current_dir(&libfsntfs)
+//        .stderr(Stdio::inherit())
+//        .stdout(Stdio::inherit())
+//        .spawn()
+//        .expect("configure failed");
+//
+//    Command::new("make install")
+//        .current_dir(&libfsntfs)
+//        .stderr(Stdio::inherit())
+//        .stdout(Stdio::inherit())
+//        .spawn()
+//        .expect("make failed");
+//
+//    Command::new("make install")
+//        .current_dir(&libfsntfs)
+//        .stderr(Stdio::inherit())
+//        .stdout(Stdio::inherit())
+//        .spawn()
+//        .expect("make install failed");
+
+    println!("cargo:rustc-link-lib=dylib=fsntfs");
+    println!("cargo:rustc-link-search=native=./libfsntfs/dist/lib");
 }

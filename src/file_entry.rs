@@ -1,15 +1,374 @@
-use crate::libfsntfs::*;
 use chrono::prelude::*;
 
-use crate::error::LibfsntfsError;
-use std::ptr;
 use crate::ffi::AsFFIPtr;
+use crate::ffi_error::{LibfsntfsError, LibfsntfsErrorRef};
+use std::ffi::c_void;
+use std::ptr;
+use crate::libfsntfs::{libfsntfs_data_stream_t, size64_t, off64_t};
 
-pub struct FileEntry {
-    pub file_entry: isize,
+#[repr(C)]
+pub struct __FileEntry(c_void);
+
+pub type FileEntryRef = *mut __FileEntry;
+
+declare_ffi_type!(FileEntry, FileEntryRef);
+impl_ffi_type!(FileEntry, FileEntryRef);
+
+extern "C" {
+    #[link_name = "\u{1}_libfsntfs_file_entry_free"]
+    pub fn libfsntfs_file_entry_free(
+        file_entry: *mut FileEntryRef,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_is_empty"]
+    pub fn libfsntfs_file_entry_is_empty(
+        file_entry: FileEntryRef,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_is_allocated"]
+    pub fn libfsntfs_file_entry_is_allocated(
+        file_entry: FileEntryRef,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_get_file_reference"]
+    pub fn libfsntfs_file_entry_get_file_reference(
+        file_entry: FileEntryRef,
+        file_reference: *mut u64,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_get_base_record_file_reference"]
+    pub fn libfsntfs_file_entry_get_base_record_file_reference(
+        file_entry: FileEntryRef,
+        file_reference: *mut u64,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_get_parent_file_reference"]
+    pub fn libfsntfs_file_entry_get_parent_file_reference(
+        file_entry: FileEntryRef,
+        file_reference: *mut u64,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_get_parent_file_reference_by_attribute_index"]
+    pub fn libfsntfs_file_entry_get_parent_file_reference_by_attribute_index(
+        file_entry: FileEntryRef,
+        attribute_index: ::std::os::raw::c_int,
+        file_reference: *mut u64,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_get_journal_sequence_number"]
+    pub fn libfsntfs_file_entry_get_journal_sequence_number(
+        file_entry: FileEntryRef,
+        journal_sequence_number: *mut u64,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_get_creation_time"]
+    pub fn libfsntfs_file_entry_get_creation_time(
+        file_entry: FileEntryRef,
+        filetime: *mut u64,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_get_modification_time"]
+    pub fn libfsntfs_file_entry_get_modification_time(
+        file_entry: FileEntryRef,
+        filetime: *mut u64,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_get_access_time"]
+    pub fn libfsntfs_file_entry_get_access_time(
+        file_entry: FileEntryRef,
+        filetime: *mut u64,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_get_entry_modification_time"]
+    pub fn libfsntfs_file_entry_get_entry_modification_time(
+        file_entry: FileEntryRef,
+        filetime: *mut u64,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_get_file_attribute_flags"]
+    pub fn libfsntfs_file_entry_get_file_attribute_flags(
+        file_entry: FileEntryRef,
+        file_attribute_flags: *mut u32,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_get_utf8_name_size"]
+    pub fn libfsntfs_file_entry_get_utf8_name_size(
+        file_entry: FileEntryRef,
+        utf8_name_size: *mut usize,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_get_utf8_name"]
+    pub fn libfsntfs_file_entry_get_utf8_name(
+        file_entry: FileEntryRef,
+        utf8_name: *mut u8,
+        utf8_name_size: usize,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_get_utf16_name_size"]
+    pub fn libfsntfs_file_entry_get_utf16_name_size(
+        file_entry: FileEntryRef,
+        utf16_name_size: *mut usize,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_get_utf16_name"]
+    pub fn libfsntfs_file_entry_get_utf16_name(
+        file_entry: FileEntryRef,
+        utf16_name: *mut u16,
+        utf16_name_size: usize,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_get_name_attribute_index"]
+    pub fn libfsntfs_file_entry_get_name_attribute_index(
+        file_entry: FileEntryRef,
+        attribute_index: *mut ::std::os::raw::c_int,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_get_utf8_name_size_by_attribute_index"]
+    pub fn libfsntfs_file_entry_get_utf8_name_size_by_attribute_index(
+        file_entry: FileEntryRef,
+        attribute_index: ::std::os::raw::c_int,
+        utf8_name_size: *mut usize,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_get_utf8_name_by_attribute_index"]
+    pub fn libfsntfs_file_entry_get_utf8_name_by_attribute_index(
+        file_entry: FileEntryRef,
+        attribute_index: ::std::os::raw::c_int,
+        utf8_name: *mut u8,
+        utf8_name_size: usize,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_get_utf16_name_size_by_attribute_index"]
+    pub fn libfsntfs_file_entry_get_utf16_name_size_by_attribute_index(
+        file_entry: FileEntryRef,
+        attribute_index: ::std::os::raw::c_int,
+        utf16_name_size: *mut usize,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_get_utf16_name_by_attribute_index"]
+    pub fn libfsntfs_file_entry_get_utf16_name_by_attribute_index(
+        file_entry: FileEntryRef,
+        attribute_index: ::std::os::raw::c_int,
+        utf16_name: *mut u16,
+        utf16_name_size: usize,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_get_utf8_reparse_point_substitute_name_size"]
+    pub fn libfsntfs_file_entry_get_utf8_reparse_point_substitute_name_size(
+        file_entry: FileEntryRef,
+        utf8_name_size: *mut usize,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_get_utf8_reparse_point_substitute_name"]
+    pub fn libfsntfs_file_entry_get_utf8_reparse_point_substitute_name(
+        file_entry: FileEntryRef,
+        utf8_name: *mut u8,
+        utf8_name_size: usize,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_get_utf16_reparse_point_substitute_name_size"]
+    pub fn libfsntfs_file_entry_get_utf16_reparse_point_substitute_name_size(
+        file_entry: FileEntryRef,
+        utf16_name_size: *mut usize,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_get_utf16_reparse_point_substitute_name"]
+    pub fn libfsntfs_file_entry_get_utf16_reparse_point_substitute_name(
+        file_entry: FileEntryRef,
+        utf16_name: *mut u16,
+        utf16_name_size: usize,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_get_utf8_reparse_point_print_name_size"]
+    pub fn libfsntfs_file_entry_get_utf8_reparse_point_print_name_size(
+        file_entry: FileEntryRef,
+        utf8_name_size: *mut usize,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_get_utf8_reparse_point_print_name"]
+    pub fn libfsntfs_file_entry_get_utf8_reparse_point_print_name(
+        file_entry: FileEntryRef,
+        utf8_name: *mut u8,
+        utf8_name_size: usize,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_get_utf16_reparse_point_print_name_size"]
+    pub fn libfsntfs_file_entry_get_utf16_reparse_point_print_name_size(
+        file_entry: FileEntryRef,
+        utf16_name_size: *mut usize,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_get_utf16_reparse_point_print_name"]
+    pub fn libfsntfs_file_entry_get_utf16_reparse_point_print_name(
+        file_entry: FileEntryRef,
+        utf16_name: *mut u16,
+        utf16_name_size: usize,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_get_security_descriptor_size"]
+    pub fn libfsntfs_file_entry_get_security_descriptor_size(
+        file_entry: FileEntryRef,
+        data_size: *mut usize,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_get_security_descriptor"]
+    pub fn libfsntfs_file_entry_get_security_descriptor(
+        file_entry: FileEntryRef,
+        data: *mut u8,
+        data_size: usize,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_get_number_of_attributes"]
+    pub fn libfsntfs_file_entry_get_number_of_attributes(
+        file_entry: FileEntryRef,
+        number_of_attributes: *mut ::std::os::raw::c_int,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_get_attribute_by_index"]
+    pub fn libfsntfs_file_entry_get_attribute_by_index(
+        file_entry: FileEntryRef,
+        attribute_index: ::std::os::raw::c_int,
+        attribute: *mut *mut libfsntfs_attribute_t,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_has_directory_entries_index"]
+    pub fn libfsntfs_file_entry_has_directory_entries_index(
+        file_entry: FileEntryRef,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_has_default_data_stream"]
+    pub fn libfsntfs_file_entry_has_default_data_stream(
+        file_entry: FileEntryRef,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_get_number_of_alternate_data_streams"]
+    pub fn libfsntfs_file_entry_get_number_of_alternate_data_streams(
+        file_entry: FileEntryRef,
+        number_of_alternate_data_streams: *mut ::std::os::raw::c_int,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_get_alternate_data_stream_by_index"]
+    pub fn libfsntfs_file_entry_get_alternate_data_stream_by_index(
+        file_entry: FileEntryRef,
+        alternate_data_stream_index: ::std::os::raw::c_int,
+        alternate_data_stream: *mut *mut libfsntfs_data_stream_t,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_has_alternate_data_stream_by_utf8_name"]
+    pub fn libfsntfs_file_entry_has_alternate_data_stream_by_utf8_name(
+        file_entry: FileEntryRef,
+        utf8_string: *const u8,
+        utf8_string_length: usize,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_has_alternate_data_stream_by_utf16_name"]
+    pub fn libfsntfs_file_entry_has_alternate_data_stream_by_utf16_name(
+        file_entry: FileEntryRef,
+        utf16_string: *const u16,
+        utf16_string_length: usize,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_get_alternate_data_stream_by_utf8_name"]
+    pub fn libfsntfs_file_entry_get_alternate_data_stream_by_utf8_name(
+        file_entry: FileEntryRef,
+        utf8_string: *const u8,
+        utf8_string_length: usize,
+        alternate_data_stream: *mut *mut libfsntfs_data_stream_t,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_get_alternate_data_stream_by_utf16_name"]
+    pub fn libfsntfs_file_entry_get_alternate_data_stream_by_utf16_name(
+        file_entry: FileEntryRef,
+        utf16_string: *const u16,
+        utf16_string_length: usize,
+        alternate_data_stream: *mut *mut libfsntfs_data_stream_t,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_get_number_of_sub_file_entries"]
+    pub fn libfsntfs_file_entry_get_number_of_sub_file_entries(
+        file_entry: FileEntryRef,
+        number_of_sub_file_entries: *mut ::std::os::raw::c_int,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_get_sub_file_entry_by_index"]
+    pub fn libfsntfs_file_entry_get_sub_file_entry_by_index(
+        file_entry: FileEntryRef,
+        sub_file_entry_index: ::std::os::raw::c_int,
+        sub_file_entry: *mut FileEntryRef,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_get_sub_file_entry_by_utf8_name"]
+    pub fn libfsntfs_file_entry_get_sub_file_entry_by_utf8_name(
+        file_entry: FileEntryRef,
+        utf8_string: *const u8,
+        utf8_string_length: usize,
+        sub_file_entry: *mut FileEntryRef,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_get_sub_file_entry_by_utf16_name"]
+    pub fn libfsntfs_file_entry_get_sub_file_entry_by_utf16_name(
+        file_entry: FileEntryRef,
+        utf16_string: *const u16,
+        utf16_string_length: usize,
+        sub_file_entry: *mut FileEntryRef,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_read_buffer"]
+    pub fn libfsntfs_file_entry_read_buffer(
+        file_entry: FileEntryRef,
+        buffer: *mut ::std::os::raw::c_void,
+        buffer_size: usize,
+        error: *mut LibfsntfsErrorRef,
+    ) -> isize;
+    #[link_name = "\u{1}_libfsntfs_file_entry_read_buffer_at_offset"]
+    pub fn libfsntfs_file_entry_read_buffer_at_offset(
+        file_entry: FileEntryRef,
+        buffer: *mut ::std::os::raw::c_void,
+        buffer_size: usize,
+        offset: off64_t,
+        error: *mut LibfsntfsErrorRef,
+    ) -> isize;
+    #[link_name = "\u{1}_libfsntfs_file_entry_seek_offset"]
+    pub fn libfsntfs_file_entry_seek_offset(
+        file_entry: FileEntryRef,
+        offset: off64_t,
+        whence: ::std::os::raw::c_int,
+        error: *mut LibfsntfsErrorRef,
+    ) -> off64_t;
+    #[link_name = "\u{1}_libfsntfs_file_entry_get_offset"]
+    pub fn libfsntfs_file_entry_get_offset(
+        file_entry: FileEntryRef,
+        offset: *mut off64_t,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_get_size"]
+    pub fn libfsntfs_file_entry_get_size(
+        file_entry: FileEntryRef,
+        size: *mut size64_t,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_get_number_of_extents"]
+    pub fn libfsntfs_file_entry_get_number_of_extents(
+        file_entry: FileEntryRef,
+        number_of_extents: *mut ::std::os::raw::c_int,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
+    #[link_name = "\u{1}_libfsntfs_file_entry_get_extent_by_index"]
+    pub fn libfsntfs_file_entry_get_extent_by_index(
+        file_entry: FileEntryRef,
+        extent_index: ::std::os::raw::c_int,
+        extent_offset: *mut off64_t,
+        extent_size: *mut size64_t,
+        extent_flags: *mut u32,
+        error: *mut LibfsntfsErrorRef,
+    ) -> ::std::os::raw::c_int;
 }
 
-impl_as_ffi_ptr!(isize, file_entry, FileEntry);
+impl Drop for FileEntry {
+    fn drop(&mut self) {
+        unsafe { libfsntfs_file_entry_free(self.as_ffi_ptr(), ptr::null_mut()) };
+    }
+}
 
 impl FileEntry {
     /// Returns the access date and time.
@@ -23,13 +382,13 @@ impl FileEntry {
 
     pub fn get_size(&self) -> Result<u64, LibfsntfsError> {
         let mut size = 0;
-        let mut error = LibfsntfsError::new();
+        let mut error = ptr::null_mut();
 
         unsafe {
             libfsntfs_file_entry_get_size(
                 &mut self.file_entry.clone() as *mut _,
                 &mut size as *mut _,
-                error.as_ffi_ptr(),
+                error,
             );
         }
 
@@ -192,11 +551,5 @@ impl FileEntry {
     }
     pub fn tell(&self) {
         unimplemented!();
-    }
-}
-
-impl Drop for FileEntry {
-    fn drop(&mut self) {
-        unsafe { libfsntfs_file_entry_free(self.as_ffi_ptr(), ptr::null_mut()) };
     }
 }

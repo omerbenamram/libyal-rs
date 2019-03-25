@@ -7,9 +7,7 @@ links = "libfsntfs"
 
 [dependencies]
 chrono = "0.4.6"
-
-[build-dependencies]
-autotools = "0.2"
+failure = "*"
 
 [[example]]
 name = "file_attributes"
