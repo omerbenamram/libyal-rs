@@ -10,10 +10,10 @@ use crate::libfsntfs::{
 use std::convert::TryFrom;
 use std::ffi::{c_void, CString};
 use std::fs::File;
+use std::mem;
 use std::os::raw::c_int;
 use std::path::{Path, PathBuf};
 use std::ptr;
-use std::mem;
 
 #[repr(C)]
 pub struct __Volume(isize);
@@ -174,24 +174,28 @@ pub type MftEntryIndex = u64;
 impl Volume {
     /// Opens a volume by filename. will panic if filename contains a nul byte.
     pub fn open(filename: impl AsRef<str>, mode: &AccessMode) -> Result<Self, Error> {
-        let mut handle = ptr::null_mut();
+        let mut handle: VolumeRef = ptr::null_mut();
         let mut c_string = CString::new(filename.as_ref()).expect("Should not contain NUL");
-        let mut init_error = ptr::null_mut();
+        let mut init_error: LibfsntfsErrorRef = ptr::null_mut();
 
-        if unsafe { libfsntfs_volume_initialize(handle, init_error) } != 1 {
+        let retcode =
+            unsafe { libfsntfs_volume_initialize(&mut handle as _, &mut init_error as _) };
+
+        if retcode != 1 {
+            println!("libfsntfs_volume_initialize returned: {}", retcode);
             return Err(Error::try_from(init_error)?);
         }
 
         let mut volume = Volume::wrap_ptr(handle);
 
-        let mut error = ptr::null_mut();
+        let mut error= ptr::null_mut();
 
         if unsafe {
             libfsntfs_volume_open(
                 volume.as_type_ref(),
                 c_string.as_ptr(),
                 mode.as_flag() as c_int,
-                error,
+                &mut error as _,
             )
         } != 1
         {
@@ -202,7 +206,7 @@ impl Volume {
     }
 
     /// Retrieves a file entry specified by the path.
-    pub fn get_file_entry_by_path(&mut self, path: impl AsRef<Path>) -> Result<FileEntry, Error> {
+    pub fn get_file_entry_by_path(&mut self, path: impl AsRef<Path>) -> Result<(), Error> {
         let mut file_entry = ptr::null_mut();
         let mut error = ptr::null_mut();
 
@@ -214,19 +218,19 @@ impl Volume {
                 path_as_str.as_ptr(),
                 path_as_str.len(),
                 file_entry,
-                error,
+                &mut error,
             );
         }
 
         if error.is_null() {
-            Ok(FileEntry::wrap_ptr(file_entry))
+            Ok(())
         } else {
             Err(Error::try_from(error)?)
         }
     }
 
     /// Retrieves a specific file entry.
-    pub fn get_file_entry_by_mft_idx(&mut self, idx: MftEntryIndex) -> Result<FileEntry, Error> {
+    pub fn get_file_entry_by_mft_idx(&mut self, idx: MftEntryIndex) -> Result<(), ()> {
         let mut file_entry = ptr::null_mut();
         let mut error = ptr::null_mut();
 
@@ -235,9 +239,9 @@ impl Volume {
         }
 
         if error.is_null() {
-            Ok(FileEntry::wrap_ptr(file_entry))
+            Ok(())
         } else {
-            Err(Error::try_from(error)?)
+            Err(())
         }
     }
 

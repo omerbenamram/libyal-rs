@@ -32,8 +32,8 @@ macro_rules! impl_ffi_type {
         }
 
         impl $ty {
-            pub fn wrap_ptr(ptr: *mut $ty_ref) -> $ty {
-               unsafe { mem::transmute::<*mut $ty_ref, $ty>(ptr) }
+            pub fn wrap_ptr(ptr: $ty_ref) -> $ty {
+                 $ty(ptr)
             }
         }
     }

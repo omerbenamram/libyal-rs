@@ -1,10 +1,10 @@
 use crate::error::Error;
 use crate::ffi::AsTypeRef;
-use std::convert::TryFrom;
-use std::ffi::c_void;
-use std::mem;
-use std::fmt::{self, Display, Formatter};
 use crate::libfsntfs::FILE;
+use std::convert::TryFrom;
+use std::ffi::{c_void, CStr};
+use std::fmt::{self, Display, Formatter};
+use std::mem;
 
 #[repr(C)]
 pub struct __LibfsntfsError(c_void);
@@ -47,24 +47,23 @@ impl Drop for LibfsntfsError {
     }
 }
 
-impl TryFrom<*mut LibfsntfsErrorRef> for Error {
+impl TryFrom<LibfsntfsErrorRef> for Error {
     type Error = Error;
 
-    fn try_from(err: *mut LibfsntfsErrorRef) -> Result<Self, Self::Error> {
+    fn try_from(err: LibfsntfsErrorRef) -> Result<Self, Self::Error> {
         if err.is_null() {
             return Err(Error::Other("No Error".to_owned()));
         }
 
         let mut buffer = vec![0; 1024];
 
-        let retcode = unsafe { libfsntfs_error_sprint(*err, buffer.as_mut_ptr(), buffer.len()) };
+        let retcode = unsafe { libfsntfs_error_sprint(err, buffer.as_mut_ptr(), buffer.len()) };
 
         if retcode == -1 {
             Err(Error::FFI("Failed to print error".to_owned()))
         } else {
-            let repr = String::from_utf8(buffer.into_iter().map(|c| c as u8).collect())
-                .map_err(|e| Error::StringIsInvalidUTF8(e))?;
-            Ok(Error::FFI(repr))
+            let repr = unsafe { CStr::from_ptr(buffer.as_ptr()) };
+            Ok(Error::FFI(repr.to_string_lossy().to_string()))
         }
     }
 }

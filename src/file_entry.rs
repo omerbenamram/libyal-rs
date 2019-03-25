@@ -391,7 +391,7 @@ impl FileEntry {
             libfsntfs_file_entry_get_size(
                 self.as_type_ref(),
                 &mut size as *mut _,
-                error,
+                &mut error,
             );
         }
 
