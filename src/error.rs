@@ -9,11 +9,14 @@ use std::ffi::{c_void, NulError, FromBytesWithNulError};
 use failure::Fail;
 use crate::ffi_error::{LibfsntfsError, LibfsntfsErrorRef};
 use std::string::FromUtf8Error;
+use std::str::Utf8Error;
 
 #[derive(Fail, Debug)]
 pub enum Error {
     #[fail(display="String is invalid UTF-8: {}", _0)]
-    StringIsInvalidUTF8(#[cause] FromBytesWithNulError),
+    StringContainsInvalidUTF8(#[cause] FromUtf8Error),
+    #[fail(display="String is invalid UTF-8: {}", _0)]
+    FailedToConvertFromBytes(#[cause] FromBytesWithNulError),
     #[fail(display="String contains NUL where is it not allowed: {}", _0)]
     StringContainsNul(#[cause] NulError),
     #[fail(display="An FFI error has occurred: {}", _0)]

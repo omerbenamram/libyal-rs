@@ -52,7 +52,7 @@ impl TryFrom<LibfsntfsErrorRef> for Error {
 
     fn try_from(err: LibfsntfsErrorRef) -> Result<Self, Self::Error> {
         if err.is_null() {
-            return Err(Error::Other("No Error".to_owned()));
+            return Err(Error::Other("Error pointer cannot be NULL".to_owned()));
         }
 
         let mut buffer = vec![0; 1024];
