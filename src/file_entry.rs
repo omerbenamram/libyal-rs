@@ -21,13 +21,13 @@ declare_ffi_type!(FileEntry, FileEntryRef);
 impl_ffi_type!(FileEntry, FileEntryRef);
 impl_ffi_dtor!(FileEntry, libfsntfs_file_entry_free);
 
-//impl Debug for FileEntry {
-//    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
-//        f.debug_struct("FileEntry")
-//            .field("Name", self.get_name()))
-//            .field("Type", self.get_)
-//    }
-//}
+impl Debug for FileEntry {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+        f.debug_struct("FileEntry")
+            .field("Name", &self.get_name().unwrap_or("".to_string()))
+            .finish()
+    }
+}
 
 extern "C" {
     #[link_name = "\u{1}_libfsntfs_file_entry_free"]
