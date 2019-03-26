@@ -389,9 +389,11 @@ impl<'a> Iterator for IterAttributes<'a> {
     type Item = Result<Attribute, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.idx <= self.num_attributes {
+        if self.idx < self.num_attributes {
+            let attr = self.handle.get_attribute_by_index(self.idx as i32);
             self.idx += 1;
-            return Some(self.handle.get_attribute_by_index(self.idx as i32));
+
+            return Some(attr);
         }
 
         None
@@ -633,7 +635,7 @@ mod tests {
         for attribute in file_attribute
             .iter_attributes()
             .unwrap()
-            .filter_map(|a| a.ok())
+            .map(|a| a.unwrap())
         {
             println!("{:?}", attribute.get_name().unwrap());
             println!("{:?}", attribute.get_type().unwrap());

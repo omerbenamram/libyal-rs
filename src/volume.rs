@@ -148,6 +148,28 @@ impl AccessMode {
 }
 
 pub type MftEntryIndex = u64;
+pub type SerialNumber = u64;
+
+pub struct IterFileEntries<'a> {
+    handle: &'a Volume,
+    number_of_file_entries: u64,
+    idx: u64
+}
+
+impl<'a> Iterator for IterFileEntries<'a> {
+    type Item = Result<FileEntry, Error>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.idx < self.number_of_file_entries {
+            let entry = self.handle.get_file_entry_by_mft_idx(self.idx);
+            self.idx += 1;
+
+            return Some(entry);
+        }
+
+        None
+    }
+}
 
 impl Volume {
     /// Opens a volume by filename.
@@ -182,6 +204,25 @@ impl Volume {
             Err(Error::try_from(error)?)
         } else {
             Ok(volume)
+        }
+    }
+
+    /// Retrieves the volume serial number.
+    pub fn get_serial_number(&self) -> Result<SerialNumber, Error> {
+        let mut serial_number = 0_64;
+        let mut error = ptr::null_mut();
+
+        if unsafe {
+            libfsntfs_volume_get_serial_number(
+                self.as_type_ref(),
+                &mut serial_number,
+                &mut error,
+            )
+        } != 1
+        {
+            Err(Error::try_from(error)?)
+        } else {
+            Ok(serial_number)
         }
     }
 
@@ -233,7 +274,11 @@ impl Volume {
 
     /// Retrieves the name.
     pub fn get_name(&self) -> Result<String, Error> {
-        get_sized_utf8_string!(self, libfsntfs_volume_get_utf8_name_size, libfsntfs_volume_get_utf8_name)
+        get_sized_utf8_string!(
+            self,
+            libfsntfs_volume_get_utf8_name_size,
+            libfsntfs_volume_get_utf8_name
+        )
     }
 
     /// Closes a volume.
@@ -306,5 +351,15 @@ mod tests {
             "FFI call to get_volume_name failed"
         );
         assert_eq!(volume_name_result.unwrap(), "KW-SRCH-1")
+    }
+
+    #[test]
+    fn test_get_serial_number() {
+        let volume_name_result = sample_volume().unwrap().get_serial_number();
+        assert!(
+            volume_name_result.is_ok(),
+            "FFI call to get_volume_name failed"
+        );
+        assert_eq!(volume_name_result.unwrap(), 13425491701870188067)
     }
 }
