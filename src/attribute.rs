@@ -2,7 +2,6 @@ use crate::error::Error;
 use crate::ffi::AsTypeRef;
 use crate::ffi_error::LibfsntfsErrorRef;
 use crate::libfsntfs::size64_t;
-use crate::utils::str_from_u8_nul_utf8_unchecked;
 use chrono::{Date, DateTime, NaiveDateTime, Utc};
 use log::error;
 use std::convert::TryFrom;
