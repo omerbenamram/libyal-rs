@@ -1,11 +1,13 @@
 use crate::error::Error;
 use crate::ffi::AsTypeRef;
 use crate::ffi_error::LibfsntfsErrorRef;
+use crate::file_entry::FileEntry;
 use crate::libfsntfs::size64_t;
 use chrono::{Date, DateTime, NaiveDateTime, Utc};
 use log::error;
 use std::convert::TryFrom;
 use std::fmt::Debug;
+use std::marker::PhantomData;
 use std::os::raw::c_int;
 use std::{fmt, ptr};
 
@@ -14,9 +16,56 @@ pub struct __Attribute(isize);
 
 pub type AttributeRef = *mut __Attribute;
 
-declare_ffi_type!(Attribute, AttributeRef);
-impl_ffi_type!(Attribute, AttributeRef);
-impl_ffi_dtor!(Attribute, libfsntfs_attribute_free);
+#[repr(C)]
+pub struct Attribute<'a>(AttributeRef, &'a FileEntry<'a>);
+
+impl<'a> crate::ffi::AsTypeRef for Attribute<'a> {
+    type Ref = AttributeRef;
+
+    #[inline]
+    fn as_type_ref(&self) -> Self::Ref {
+        // https://users.rust-lang.org/t/is-it-ub-to-convert-t-to-mut-t/16238/4
+        self.0 as *const _ as *mut _
+    }
+}
+
+impl<'a> Attribute<'a> {
+    pub fn wrap_ptr(file_entry: &'a FileEntry<'a>, ptr: AttributeRef) -> Self {
+        Attribute(ptr, file_entry)
+    }
+}
+
+impl<'a> Drop for Attribute<'a> {
+    fn drop(&mut self) {
+        use crate::ffi::AsTypeRef;
+        use log::trace;
+
+        let mut error = ptr::null_mut();
+
+        trace!("Calling `libfsntfs_attribute_free`");
+
+        unsafe {
+            libfsntfs_attribute_free(&mut self.as_type_ref(), &mut error);
+        }
+
+        debug_assert!(error.is_null(), "`libfsntfs_attribute_free` failed!");
+    }
+}
+
+impl<'a> Debug for Attribute<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        f.debug_struct("Attribute")
+            .field("Name", &self.get_name().unwrap_or("".to_string()))
+            .field(
+                "Type",
+                &self
+                    .get_type()
+                    .and_then(|a| Ok(format!("{:?}", a)))
+                    .unwrap_or_else(|_| "".to_string()),
+            )
+            .finish()
+    }
+}
 
 #[derive(PartialOrd, PartialEq, Debug, Clone)]
 #[repr(C)]
@@ -66,21 +115,6 @@ impl TryFrom<u32> for AttributeType {
             4294967295 => Ok(AttributeType::EndOfAttributes),
             _ => Err(Error::UnknownAttributeEnumVariant(value)),
         }
-    }
-}
-
-impl Debug for Attribute {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        f.debug_struct("Attribute")
-            .field("Name", &self.get_name().unwrap_or("".to_string()))
-            .field(
-                "Type",
-                &self
-                    .get_type()
-                    .and_then(|a| Ok(format!("{:?}", a)))
-                    .unwrap_or_else(|_| "".to_string()),
-            )
-            .finish()
     }
 }
 
@@ -436,7 +470,7 @@ pub struct LoggedUtilityStream {}
 #[derive(Debug, Clone)]
 pub struct EndOfAttributes {}
 
-impl Attribute {
+impl<'a> Attribute<'a> {
     pub fn get_name(&self) -> Result<String, Error> {
         get_sized_utf8_string!(
             self,

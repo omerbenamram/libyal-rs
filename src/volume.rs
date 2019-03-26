@@ -1,4 +1,3 @@
-use log::error;
 use crate::error::Error;
 use crate::ffi::AsTypeRef;
 use crate::ffi_error::{LibfsntfsError, LibfsntfsErrorRef};
@@ -8,9 +7,11 @@ use crate::libfsntfs::{
     LIBFSNTFS_ACCESS_FLAGS_LIBFSNTFS_ACCESS_FLAG_READ,
     LIBFSNTFS_ACCESS_FLAGS_LIBFSNTFS_ACCESS_FLAG_WRITE,
 };
+use log::error;
 use std::convert::TryFrom;
 use std::ffi::{c_void, CStr, CString};
 use std::fs::File;
+use std::marker::PhantomData;
 use std::mem;
 use std::os::raw::c_int;
 use std::path::{Iter, Path, PathBuf};
@@ -21,8 +22,24 @@ pub struct __Volume(isize);
 
 pub type VolumeRef = *mut __Volume;
 
-declare_ffi_type!(Volume, VolumeRef);
-impl_ffi_type!(Volume, VolumeRef);
+#[repr(C)]
+pub struct Volume(VolumeRef);
+
+impl crate::ffi::AsTypeRef for Volume {
+    type Ref = VolumeRef;
+
+    #[inline]
+    fn as_type_ref(&self) -> Self::Ref {
+        // https://users.rust-lang.org/t/is-it-ub-to-convert-t-to-mut-t/16238/4
+        self.0 as *const _ as *mut _
+    }
+}
+
+impl Volume {
+    pub fn wrap_ptr(ptr: VolumeRef) -> Volume {
+        Volume(ptr)
+    }
+}
 
 extern "C" {
     /// Creates a volume
@@ -156,7 +173,7 @@ pub struct IterFileEntries<'a> {
 }
 
 impl<'a> Iterator for IterFileEntries<'a> {
-    type Item = Result<FileEntry, Error>;
+    type Item = Result<FileEntry<'a>, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.idx < self.number_of_file_entries {
@@ -172,7 +189,7 @@ impl<'a> Iterator for IterFileEntries<'a> {
     }
 }
 
-impl Volume {
+impl<'a> Volume {
     /// Opens a volume by filename.
     pub fn open(filename: impl AsRef<str>, mode: AccessMode) -> Result<Self, Error> {
         let mut handle: VolumeRef = ptr::null_mut();
@@ -252,7 +269,7 @@ impl Volume {
         {
             Err(Error::try_from(error)?)
         } else {
-            Ok(FileEntry::wrap_ptr(file_entry))
+            Ok(FileEntry::wrap_ptr(self, file_entry))
         }
     }
 
@@ -272,7 +289,7 @@ impl Volume {
         {
             Err(Error::try_from(error)?)
         } else {
-            Ok(FileEntry::wrap_ptr(file_entry))
+            Ok(FileEntry::wrap_ptr(self, file_entry))
         }
     }
 
@@ -301,7 +318,7 @@ impl Volume {
         {
             Err(Error::try_from(error)?)
         } else {
-            Ok(FileEntry::wrap_ptr(file_entry))
+            Ok(FileEntry::wrap_ptr(self, file_entry))
         }
     }
 
