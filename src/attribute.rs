@@ -1,6 +1,6 @@
 use crate::error::Error;
-use crate::ffi_error::LibfsntfsErrorRef;
 use crate::ffi::AsTypeRef;
+use crate::ffi_error::LibfsntfsErrorRef;
 use crate::libfsntfs::size64_t;
 use crate::utils::str_from_u8_nul_utf8_unchecked;
 use std::convert::TryFrom;
@@ -333,37 +333,11 @@ extern "C" {
 
 impl Attribute {
     pub fn get_name(&self) -> Result<String, Error> {
-        let mut name_size = 0_usize;
-        let mut error = ptr::null_mut();
-
-        if unsafe {
-            libfsntfs_attribute_get_utf8_name_size(self.as_type_ref(), &mut name_size, &mut error)
-        } != 1
-        {
-            return Err(Error::try_from(error)?);
-        };
-
-        if name_size == 0 {
-            return Ok(String::new());
-        }
-
-        let mut name = vec![0; name_size];
-        let mut error = ptr::null_mut();
-
-        if unsafe {
-            libfsntfs_attribute_get_utf8_name(
-                self.as_type_ref(),
-                name.as_mut_ptr(),
-                name.len(),
-                &mut error,
-            )
-        } != 1
-        {
-            Err(Error::try_from(error)?)
-        } else {
-            let s = unsafe { str_from_u8_nul_utf8_unchecked(&name) };
-            Ok(s.to_string())
-        }
+        get_sized_utf8_string!(
+            self,
+            libfsntfs_attribute_get_utf8_name_size,
+            libfsntfs_attribute_get_utf8_name
+        )
     }
 
     pub fn get_type(&self) -> Result<AttributeType, Error> {

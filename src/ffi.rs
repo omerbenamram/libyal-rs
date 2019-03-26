@@ -58,3 +58,39 @@ macro_rules! impl_ffi_dtor {
         }
     };
 }
+
+#[macro_export]
+macro_rules! get_sized_utf8_string {
+    ($self: ident, $get_size: ident, $get_string: ident) => {{
+        let mut name_size = 0_usize;
+        let mut error = ptr::null_mut();
+
+        if unsafe { $get_size($self.as_type_ref(), &mut name_size, &mut error) } != 1 {
+            return Err(Error::try_from(error)?);
+        };
+
+        if name_size == 0 {
+            return Ok(String::new());
+        }
+
+        let mut name = vec![0; name_size];
+        let mut error = ptr::null_mut();
+
+        if unsafe {
+            $get_string(
+                $self.as_type_ref(),
+                name.as_mut_ptr(),
+                name.len(),
+                &mut error,
+            )
+        } != 1
+        {
+            Err(Error::try_from(error)?)
+        } else {
+            // Discard nul terminator;
+            name.pop().expect("name_size was checked to be > 0");
+            let s = String::from_utf8(name).map_err(|e| Error::StringContainsInvalidUTF8(e))?;
+            Ok(s)
+        }
+    }};
+}

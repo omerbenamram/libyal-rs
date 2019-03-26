@@ -233,23 +233,7 @@ impl Volume {
 
     /// Retrieves the name.
     pub fn get_name(&self) -> Result<String, Error> {
-        let mut name = vec![0; 1024];
-        let mut error = ptr::null_mut();
-
-        if unsafe {
-            libfsntfs_volume_get_utf8_name(
-                self.as_type_ref(),
-                name.as_mut_ptr(),
-                name.len(),
-                &mut error,
-            )
-        } != 1
-        {
-            Err(Error::try_from(error)?)
-        } else {
-            let s = unsafe { str_from_u8_nul_utf8_unchecked(&name) };
-            Ok(s.to_string())
-        }
+        get_sized_utf8_string!(self, libfsntfs_volume_get_utf8_name_size, libfsntfs_volume_get_utf8_name)
     }
 
     /// Closes a volume.
@@ -306,7 +290,7 @@ impl Volume {
 mod tests {
     use super::*;
     use crate::fixtures::*;
-    use log::{trace, info};
+    use log::{info, trace};
     use std::path::PathBuf;
 
     #[test]

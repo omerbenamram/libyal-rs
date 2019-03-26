@@ -24,7 +24,7 @@ impl_ffi_dtor!(FileEntry, libfsntfs_file_entry_free);
 //impl Debug for FileEntry {
 //    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
 //        f.debug_struct("FileEntry")
-//            .field("Name", self.get_name().map_err("Failed"))
+//            .field("Name", self.get_name()))
 //            .field("Type", self.get_)
 //    }
 //}
@@ -477,6 +477,14 @@ impl FileEntry {
         }
     }
 
+    pub fn get_name(&self) -> Result<String, Error> {
+        get_sized_utf8_string!(
+            self,
+            libfsntfs_file_entry_get_utf8_name_size,
+            libfsntfs_file_entry_get_utf8_name
+        )
+    }
+
     pub fn get_base_record_file_reference(&self) {
         unimplemented!();
     }
@@ -518,10 +526,6 @@ impl FileEntry {
     }
 
     pub fn get_modification_time_as_integer(&self) {
-        unimplemented!();
-    }
-
-    pub fn get_name(&self) {
         unimplemented!();
     }
 
