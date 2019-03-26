@@ -13,7 +13,7 @@ use std::ffi::{c_void, CStr, CString};
 use std::fs::File;
 use std::mem;
 use std::os::raw::c_int;
-use std::path::{Path, PathBuf};
+use std::path::{Iter, Path, PathBuf};
 use std::ptr;
 
 #[repr(C)]
@@ -152,8 +152,8 @@ pub type SerialNumber = u64;
 
 pub struct IterFileEntries<'a> {
     handle: &'a Volume,
-    number_of_file_entries: u64,
-    idx: u64
+    number_of_file_entries: usize,
+    idx: usize,
 }
 
 impl<'a> Iterator for IterFileEntries<'a> {
@@ -161,7 +161,9 @@ impl<'a> Iterator for IterFileEntries<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.idx < self.number_of_file_entries {
-            let entry = self.handle.get_file_entry_by_mft_idx(self.idx);
+            let entry = self
+                .handle
+                .get_file_entry_by_mft_idx(self.idx as MftEntryIndex);
             self.idx += 1;
 
             return Some(entry);
@@ -207,17 +209,21 @@ impl Volume {
         }
     }
 
+    pub fn iter_entries(&self) -> Result<IterFileEntries, Error> {
+        Ok(IterFileEntries {
+            handle: self,
+            number_of_file_entries: self.get_number_of_file_entries()?,
+            idx: 0,
+        })
+    }
+
     /// Retrieves the volume serial number.
     pub fn get_serial_number(&self) -> Result<SerialNumber, Error> {
         let mut serial_number = 0_64;
         let mut error = ptr::null_mut();
 
         if unsafe {
-            libfsntfs_volume_get_serial_number(
-                self.as_type_ref(),
-                &mut serial_number,
-                &mut error,
-            )
+            libfsntfs_volume_get_serial_number(self.as_type_ref(), &mut serial_number, &mut error)
         } != 1
         {
             Err(Error::try_from(error)?)
@@ -361,5 +367,15 @@ mod tests {
             "FFI call to get_volume_name failed"
         );
         assert_eq!(volume_name_result.unwrap(), 13425491701870188067)
+    }
+
+    #[test]
+    fn test_iter_entries() {
+        let volume = sample_volume().unwrap();
+
+        for result in volume.iter_entries().unwrap() {
+            let entry = result.unwrap();
+            println!("{:?}", entry);
+        }
     }
 }

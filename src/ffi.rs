@@ -25,6 +25,7 @@ macro_rules! impl_ffi_type {
 
             #[inline]
             fn as_type_ref(&self) -> Self::Ref {
+                // https://users.rust-lang.org/t/is-it-ub-to-convert-t-to-mut-t/16238/4
                 self.0 as *const _ as *mut _
             }
         }

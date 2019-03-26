@@ -4,8 +4,9 @@ use crate::ffi_error::LibfsntfsErrorRef;
 use crate::libfsntfs::size64_t;
 use crate::utils::str_from_u8_nul_utf8_unchecked;
 use std::convert::TryFrom;
+use std::fmt::Debug;
 use std::os::raw::c_int;
-use std::ptr;
+use std::{fmt, ptr};
 
 #[repr(C)]
 pub struct __Attribute(isize);
@@ -63,6 +64,21 @@ impl TryFrom<u32> for AttributeType {
             4294967295 => Ok(AttributeType::AttributeTypeEndOfAttributes),
             _ => Err(Error::UnknownAttributeEnumVariant(value)),
         }
+    }
+}
+
+impl Debug for Attribute {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        f.debug_struct("Attribute")
+            .field("Name", &self.get_name().unwrap_or("".to_string()))
+            .field(
+                "Type",
+                &self
+                    .get_type()
+                    .and_then(|a| Ok(format!("{:?}", a)))
+                    .unwrap_or("".to_string()),
+            )
+            .finish()
     }
 }
 
