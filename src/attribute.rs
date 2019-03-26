@@ -1,6 +1,6 @@
 use crate::error::Error;
 use crate::ffi::AsTypeRef;
-use crate::ffi_error::LibfsntfsErrorRef;
+use crate::ffi_error::{LibfsntfsErrorRef, LibfsntfsErrorRefMut};
 use crate::file_entry::FileEntry;
 use crate::libfsntfs::size64_t;
 use chrono::{Date, DateTime, NaiveDateTime, Utc};
@@ -14,23 +14,35 @@ use std::{fmt, ptr};
 #[repr(C)]
 pub struct __Attribute(isize);
 
-pub type AttributeRef = *mut __Attribute;
+pub type AttributeRefMut = *mut __Attribute;
+pub type AttributeRef = *const __Attribute;
 
 #[repr(C)]
-pub struct Attribute<'a>(AttributeRef, &'a FileEntry<'a>);
+pub struct Attribute<'a>(AttributeRefMut, &'a FileEntry<'a>);
 
 impl<'a> crate::ffi::AsTypeRef for Attribute<'a> {
     type Ref = AttributeRef;
+    type RefMut = AttributeRefMut;
 
     #[inline]
     fn as_type_ref(&self) -> Self::Ref {
         // https://users.rust-lang.org/t/is-it-ub-to-convert-t-to-mut-t/16238/4
-        self.0 as *const _ as *mut _
+        self.0 as *const _
+    }
+
+    #[inline]
+    fn as_type_ref_mut(&mut self) -> Self::RefMut {
+        self.0 as *mut _
+    }
+
+    #[inline]
+    fn as_raw(&mut self) -> *mut Self::RefMut {
+        &mut self.0 as *mut _
     }
 }
 
 impl<'a> Attribute<'a> {
-    pub fn wrap_ptr(file_entry: &'a FileEntry<'a>, ptr: AttributeRef) -> Self {
+    pub fn wrap_ptr(file_entry: &'a FileEntry<'a>, ptr: AttributeRefMut) -> Self {
         Attribute(ptr, file_entry)
     }
 }
@@ -45,7 +57,7 @@ impl<'a> Drop for Attribute<'a> {
         trace!("Calling `libfsntfs_attribute_free`");
 
         unsafe {
-            libfsntfs_attribute_free(&mut self.as_type_ref(), &mut error);
+            libfsntfs_attribute_free(self.as_raw(), &mut error);
         }
 
         debug_assert!(error.is_null(), "`libfsntfs_attribute_free` failed!");
@@ -120,266 +132,266 @@ impl TryFrom<u32> for AttributeType {
 
 extern "C" {
     pub fn libfsntfs_attribute_free(
-        attribute: *mut AttributeRef,
-        error: *mut LibfsntfsErrorRef,
+        attribute: *mut AttributeRefMut,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_attribute_get_type(
         attribute: AttributeRef,
         type_: *mut u32,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_attribute_get_data_flags(
         attribute: AttributeRef,
         data_flags: *mut u16,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_attribute_get_utf8_name_size(
         attribute: AttributeRef,
         utf8_name_size: *mut usize,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_attribute_get_utf8_name(
         attribute: AttributeRef,
         utf8_name: *mut u8,
         utf8_name_size: usize,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_attribute_get_utf16_name_size(
         attribute: AttributeRef,
         utf16_name_size: *mut usize,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_attribute_get_utf16_name(
         attribute: AttributeRef,
         utf16_name: *mut u16,
         utf16_name_size: usize,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_attribute_get_data_vcn_range(
         attribute: AttributeRef,
         data_first_vcn: *mut u64,
         data_last_vcn: *mut u64,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_attribute_get_file_reference(
         attribute: AttributeRef,
         mft_entry_index: *mut u64,
         sequence_number: *mut u16,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_attribute_get_data_size(
         attribute: AttributeRef,
         data_size: *mut size64_t,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_file_name_attribute_get_parent_file_reference(
         attribute: AttributeRef,
         parent_file_reference: *mut u64,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_file_name_attribute_get_creation_time(
         attribute: AttributeRef,
         filetime: *mut u64,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_file_name_attribute_get_modification_time(
         attribute: AttributeRef,
         filetime: *mut u64,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_file_name_attribute_get_access_time(
         attribute: AttributeRef,
         filetime: *mut u64,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_file_name_attribute_get_entry_modification_time(
         attribute: AttributeRef,
         filetime: *mut u64,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_file_name_attribute_get_file_attribute_flags(
         attribute: AttributeRef,
         file_attribute_flags: *mut u32,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_file_name_attribute_get_utf8_name_size(
         attribute: AttributeRef,
         utf8_name_size: *mut usize,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_file_name_attribute_get_utf8_name(
         attribute: AttributeRef,
         utf8_name: *mut u8,
         utf8_name_size: usize,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_file_name_attribute_get_utf16_name_size(
         attribute: AttributeRef,
         utf16_name_size: *mut usize,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_file_name_attribute_get_utf16_name(
         attribute: AttributeRef,
         utf16_name: *mut u16,
         utf16_name_size: usize,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_object_identifier_attribute_get_droid_file_identifier(
         attribute: AttributeRef,
         guid: *mut u8,
         size: usize,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_object_identifier_attribute_get_birth_droid_volume_identifier(
         attribute: AttributeRef,
         guid: *mut u8,
         size: usize,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_object_identifier_attribute_get_birth_droid_file_identifier(
         attribute: AttributeRef,
         guid: *mut u8,
         size: usize,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_object_identifier_attribute_get_birth_droid_domain_identifier(
         attribute: AttributeRef,
         guid: *mut u8,
         size: usize,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_reparse_point_attribute_get_tag(
         attribute: AttributeRef,
         tag: *mut u32,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_reparse_point_attribute_get_utf8_substitute_name_size(
         attribute: AttributeRef,
         utf8_name_size: *mut usize,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_reparse_point_attribute_get_utf8_substitute_name(
         attribute: AttributeRef,
         utf8_name: *mut u8,
         utf8_name_size: usize,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_reparse_point_attribute_get_utf16_substitute_name_size(
         attribute: AttributeRef,
         utf16_name_size: *mut usize,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_reparse_point_attribute_get_utf16_substitute_name(
         attribute: AttributeRef,
         utf16_name: *mut u16,
         utf16_name_size: usize,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_reparse_point_attribute_get_utf8_print_name_size(
         attribute: AttributeRef,
         utf8_name_size: *mut usize,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_reparse_point_attribute_get_utf8_print_name(
         attribute: AttributeRef,
         utf8_name: *mut u8,
         utf8_name_size: usize,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_reparse_point_attribute_get_utf16_print_name_size(
         attribute: AttributeRef,
         utf16_name_size: *mut usize,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_reparse_point_attribute_get_utf16_print_name(
         attribute: AttributeRef,
         utf16_name: *mut u16,
         utf16_name_size: usize,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_security_descriptor_attribute_get_security_descriptor_size(
         attribute: AttributeRef,
         data_size: *mut usize,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_security_descriptor_attribute_get_security_descriptor(
         attribute: AttributeRef,
         data: *mut u8,
         data_size: usize,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_standard_information_attribute_get_creation_time(
         attribute: AttributeRef,
         filetime: *mut u64,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_standard_information_attribute_get_modification_time(
         attribute: AttributeRef,
         filetime: *mut u64,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_standard_information_attribute_get_access_time(
         attribute: AttributeRef,
         filetime: *mut u64,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_standard_information_attribute_get_entry_modification_time(
         attribute: AttributeRef,
         filetime: *mut u64,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_standard_information_attribute_get_file_attribute_flags(
         attribute: AttributeRef,
         file_attribute_flags: *mut u32,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_standard_information_attribute_get_owner_identifier(
         attribute: AttributeRef,
         owner_identifier: *mut u32,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_standard_information_attribute_get_security_descriptor_identifier(
         attribute: AttributeRef,
         security_descriptor_identifier: *mut u32,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_standard_information_attribute_get_update_sequence_number(
         attribute: AttributeRef,
         update_sequence_number: *mut u64,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_volume_information_attribute_get_version(
         attribute: AttributeRef,
         major_version: *mut u8,
         minor_version: *mut u8,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_volume_information_attribute_get_flags(
         attribute: AttributeRef,
         flags: *mut u16,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_volume_name_attribute_get_utf8_name_size(
         attribute: AttributeRef,
         utf8_name_size: *mut usize,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_volume_name_attribute_get_utf8_name(
         attribute: AttributeRef,
         utf8_name: *mut u8,
         utf8_name_size: usize,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_volume_name_attribute_get_utf16_name_size(
         attribute: AttributeRef,
         utf16_name_size: *mut usize,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_volume_name_attribute_get_utf16_name(
         attribute: AttributeRef,
         utf16_name: *mut u16,
         utf16_name_size: usize,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
 }
 

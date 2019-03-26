@@ -1,7 +1,7 @@
 use crate::error::Error;
 use crate::ffi::AsTypeRef;
-use crate::ffi_error::{LibfsntfsError, LibfsntfsErrorRef};
-use crate::file_entry::{FileEntry, FileEntryRef};
+use crate::ffi_error::{LibfsntfsError, LibfsntfsErrorRef, LibfsntfsErrorRefMut};
+use crate::file_entry::{FileEntry, FileEntryRef, FileEntryRefMut};
 use crate::libfsntfs::{
     libfsntfs_file_entry_t, size32_t, LIBFSNTFS_ACCESS_FLAGS,
     LIBFSNTFS_ACCESS_FLAGS_LIBFSNTFS_ACCESS_FLAG_READ,
@@ -20,24 +20,49 @@ use std::ptr;
 #[repr(C)]
 pub struct __Volume(isize);
 
-pub type VolumeRef = *mut __Volume;
+pub type VolumeRefMut = *mut __Volume;
+pub type VolumeRef = *const __Volume;
 
 #[repr(C)]
-pub struct Volume(VolumeRef);
+pub struct Volume(VolumeRefMut);
 
 impl crate::ffi::AsTypeRef for Volume {
     type Ref = VolumeRef;
+    type RefMut = VolumeRefMut;
 
     #[inline]
     fn as_type_ref(&self) -> Self::Ref {
         // https://users.rust-lang.org/t/is-it-ub-to-convert-t-to-mut-t/16238/4
-        self.0 as *const _ as *mut _
+        self.0 as *const _
+    }
+
+    fn as_type_ref_mut(&mut self) -> Self::RefMut {
+        self.0
+    }
+
+    fn as_raw(&mut self) -> *mut Self::RefMut {
+        &mut self.0 as *mut _
     }
 }
 
 impl Volume {
-    pub fn wrap_ptr(ptr: VolumeRef) -> Volume {
+    pub fn wrap_ptr(ptr: VolumeRefMut) -> Volume {
         Volume(ptr)
+    }
+}
+
+impl Drop for Volume {
+    fn drop(&mut self) {
+        let mut error = ptr::null_mut();
+
+        if unsafe { libfsntfs_volume_close(self.as_type_ref(), &mut error) } != 1 {
+            error!("`libfsntfs_volume_close` failed!");
+        }
+
+        let mut error = ptr::null_mut();
+        if unsafe { libfsntfs_volume_free(self.as_raw(), &mut error) } != 1 {
+            panic!("`libfsntfs_volume_free` failed!");
+        }
     }
 }
 
@@ -45,107 +70,103 @@ extern "C" {
     /// Creates a volume
     /// Make sure the value volume is referencing, is set to NULL
     /// Returns 1 if successful or -1 on error
-    pub fn libfsntfs_volume_initialize(
-        volume: *mut VolumeRef,
-        error: *mut LibfsntfsErrorRef,
-    ) -> c_int;
+    pub fn libfsntfs_volume_initialize(volume: *mut VolumeRefMut, error: *mut LibfsntfsErrorRefMut) -> c_int;
     /// Frees a volume
     /// Returns 1 if successful or -1 on error
-    pub fn libfsntfs_volume_free(volume: *mut VolumeRef, error: *mut LibfsntfsErrorRef) -> c_int;
-    pub fn libfsntfs_volume_signal_abort(volume: VolumeRef, error: *mut LibfsntfsErrorRef)
-        -> c_int;
+    pub fn libfsntfs_volume_free(volume: *mut VolumeRefMut, error: *mut LibfsntfsErrorRefMut) -> c_int;
+    pub fn libfsntfs_volume_signal_abort(volume: VolumeRef, error: *mut LibfsntfsErrorRefMut) -> c_int;
     pub fn libfsntfs_volume_open(
         volume: VolumeRef,
         filename: *const ::std::os::raw::c_char,
         access_flags: c_int,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
-    pub fn libfsntfs_volume_close(volume: VolumeRef, error: *mut LibfsntfsErrorRef) -> c_int;
+    pub fn libfsntfs_volume_close(volume: VolumeRef, error: *mut LibfsntfsErrorRefMut) -> c_int;
     pub fn libfsntfs_volume_has_bitlocker_drive_encryption(
         volume: VolumeRef,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_volume_has_volume_shadow_snapshots(
         volume: VolumeRef,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_volume_get_cluster_block_size(
         volume: VolumeRef,
         cluster_block_size: *mut usize,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_volume_get_mft_entry_size(
         volume: VolumeRef,
         mft_entry_size: *mut size32_t,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_volume_get_index_entry_size(
         volume: VolumeRef,
         index_entry_size: *mut size32_t,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_volume_get_utf8_name_size(
         volume: VolumeRef,
         utf8_name_size: *mut usize,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_volume_get_utf8_name(
         volume: VolumeRef,
         utf8_name: *mut u8,
         utf8_name_size: usize,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_volume_get_utf16_name_size(
         volume: VolumeRef,
         utf16_name_size: *mut usize,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_volume_get_utf16_name(
         volume: VolumeRef,
         utf16_name: *mut u16,
         utf16_name_size: usize,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_volume_get_version(
         volume: VolumeRef,
         major_version: *mut u8,
         minor_version: *mut u8,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_volume_get_serial_number(
         volume: VolumeRef,
         serial_number: *mut u64,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_volume_get_number_of_file_entries(
         volume: VolumeRef,
         number_of_file_entries: *mut u64,
-        error: *mut LibfsntfsErrorRef,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_volume_get_file_entry_by_index(
         volume: VolumeRef,
         mft_entry_index: u64,
-        file_entry: *mut FileEntryRef,
-        error: *mut LibfsntfsErrorRef,
+        file_entry: *mut FileEntryRefMut,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_volume_get_root_directory(
         volume: VolumeRef,
-        file_entry: *mut FileEntryRef,
-        error: *mut LibfsntfsErrorRef,
+        file_entry: *mut FileEntryRefMut,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_volume_get_file_entry_by_utf8_path(
         volume: VolumeRef,
         utf8_string: *const u8,
         utf8_string_length: usize,
-        file_entry: *mut FileEntryRef,
-        error: *mut LibfsntfsErrorRef,
+        file_entry: *mut FileEntryRefMut,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
     pub fn libfsntfs_volume_get_file_entry_by_utf16_path(
         volume: VolumeRef,
         utf16_string: *const u16,
         utf16_string_length: usize,
-        file_entry: *mut FileEntryRef,
-        error: *mut LibfsntfsErrorRef,
+        file_entry: *mut FileEntryRefMut,
+        error: *mut LibfsntfsErrorRefMut,
     ) -> c_int;
 }
 
@@ -162,8 +183,8 @@ impl AccessMode {
         }
     }
 }
-
 pub type MftEntryIndex = u64;
+
 pub type SerialNumber = u64;
 
 pub struct IterFileEntries<'a> {
@@ -192,11 +213,11 @@ impl<'a> Iterator for IterFileEntries<'a> {
 impl<'a> Volume {
     /// Opens a volume by filename.
     pub fn open(filename: impl AsRef<str>, mode: AccessMode) -> Result<Self, Error> {
-        let mut handle: VolumeRef = ptr::null_mut();
+        let mut handle = ptr::null_mut();
 
         let c_string = CString::new(filename.as_ref()).map_err(Error::StringContainsNul)?;
 
-        let mut init_error: LibfsntfsErrorRef = ptr::null_mut();
+        let mut init_error = ptr::null_mut();
 
         let retcode =
             unsafe { libfsntfs_volume_initialize(&mut handle as _, &mut init_error as _) };
@@ -349,21 +370,6 @@ impl<'a> Volume {
     /// Signals the volume to abort the current activity.
     fn signal_abort(&self) {
         unimplemented!();
-    }
-}
-
-impl Drop for Volume {
-    fn drop(&mut self) {
-        let mut error = ptr::null_mut();
-
-        if unsafe { libfsntfs_volume_close(self.as_type_ref(), &mut error) } != 1 {
-            error!("`libfsntfs_volume_close` failed!");
-        }
-
-        let mut error = ptr::null_mut();
-        if unsafe { libfsntfs_volume_free(&mut self.as_type_ref(), &mut error) } != 1 {
-            panic!("`libfsntfs_volume_free` failed!");
-        }
     }
 }
 

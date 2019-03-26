@@ -30,8 +30,36 @@ pub fn sample_volume() -> Result<Volume, Error> {
     Volume::open(&volume_path, AccessMode::Read)
 }
 
+pub fn entries_with_data(volume: &Volume) {
+    let mut entries: Vec<FileEntry> = volume
+        .iter_entries()
+        .unwrap()
+        .filter_map(|f| f.ok())
+        .collect();
+
+    for (i, entry) in entries.iter().enumerate() {
+        if let Ok(enumerator) = entry.iter_attributes() {
+            let alloc: Vec<Attribute> = enumerator.filter_map(|attr| attr.ok()).collect();
+
+            let has_filename = alloc
+                .iter()
+                .find(|a| a.get_type().unwrap() == AttributeType::FileName)
+                .is_some();
+
+            let has_data = alloc
+                .iter()
+                .find(|a| a.get_type().unwrap() == AttributeType::Data)
+                .is_some();
+
+            if has_filename && has_data {
+                println!("{}: {:?}", i, alloc);
+            }
+        }
+    }
+}
+
 pub fn file_entry(volume: &Volume) -> Result<FileEntry, Error> {
-    let entries: Vec<FileEntry> = volume
+    let mut entries: Vec<FileEntry> = volume
         .iter_entries()
         .unwrap()
         .filter_map(|f| f.ok())
@@ -42,10 +70,20 @@ pub fn file_entry(volume: &Volume) -> Result<FileEntry, Error> {
         .find(|f| {
             let e = f.iter_attributes();
             match e {
-                Ok(attrs) => attrs
-                    .filter_map(|attr| attr.ok())
-                    .find(|a| a.get_type().unwrap() == AttributeType::FileName)
-                    .is_some(),
+                Ok(attrs) => {
+                    let alloc: Vec<Attribute> = attrs.filter_map(|attr| attr.ok()).collect();
+                    let has_filename = alloc
+                        .iter()
+                        .find(|a| a.get_type().unwrap() == AttributeType::FileName)
+                        .is_some();
+
+                    let has_data = alloc
+                        .iter()
+                        .find(|a| a.get_type().unwrap() == AttributeType::Data)
+                        .is_some();
+
+                    has_filename && has_data
+                }
                 Err(_) => false,
             }
         })
