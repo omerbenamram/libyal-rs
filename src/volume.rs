@@ -1,3 +1,4 @@
+use log::error;
 use crate::error::Error;
 use crate::ffi::AsTypeRef;
 use crate::ffi_error::{LibfsntfsError, LibfsntfsErrorRef};
@@ -22,7 +23,6 @@ pub type VolumeRef = *mut __Volume;
 
 declare_ffi_type!(Volume, VolumeRef);
 impl_ffi_type!(Volume, VolumeRef);
-impl_ffi_dtor!(Volume, libfsntfs_volume_free);
 
 extern "C" {
     /// Creates a volume
@@ -332,6 +332,21 @@ impl Volume {
     /// Signals the volume to abort the current activity.
     fn signal_abort(&self) {
         unimplemented!();
+    }
+}
+
+impl Drop for Volume {
+    fn drop(&mut self) {
+        let mut error = ptr::null_mut();
+
+        if unsafe { libfsntfs_volume_close(self.as_type_ref(), &mut error) } != 1 {
+            error!("`libfsntfs_volume_close` failed!");
+        }
+
+        let mut error = ptr::null_mut();
+        if unsafe { libfsntfs_volume_free(&mut self.as_type_ref(), &mut error) } != 1 {
+            panic!("`libfsntfs_volume_free` failed!");
+        }
     }
 }
 

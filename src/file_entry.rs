@@ -644,8 +644,20 @@ mod tests {
     fn test_read() {
         let mut entry = file_entry().unwrap();
 
-        let mut buf = [0; 4096];
+        dbg!(&entry);
+
+        let attrs = &entry
+            .iter_attributes()
+            .unwrap()
+            .filter_map(|a| a.ok())
+            .collect::<Vec<Attribute>>();
+
+        dbg!(attrs);
+
+        let mut buf = vec![0; 100];
         entry.read(&mut buf);
+
+        dbg!(&buf);
 
         assert!(!buf.is_empty())
     }

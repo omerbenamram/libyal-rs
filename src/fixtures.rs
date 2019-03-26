@@ -1,3 +1,4 @@
+use crate::attribute::AttributeType;
 use crate::error::Error;
 use crate::file_entry::FileEntry;
 use crate::volume::{AccessMode, Volume};
@@ -31,5 +32,12 @@ pub fn sample_volume() -> Result<Volume, Error> {
 
 pub fn file_entry() -> Result<FileEntry, Error> {
     let volume = sample_volume().expect("Sample volume fixture should work");
-    volume.iter_entries().unwrap().take(1).next().unwrap()
+    for f in volume.iter_entries().unwrap().filter_map(|f| f.ok()) {
+        for attribute in f.iter_attributes().unwrap().filter_map(|attr| attr.ok()) {
+            if attribute.get_type().unwrap() == AttributeType::FileName {
+                return Ok(f);
+            }
+        }
+    }
+    Err(Error::Other("No file with data found!".to_string()))
 }
