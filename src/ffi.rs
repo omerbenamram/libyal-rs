@@ -3,7 +3,7 @@ use std::mem;
 pub trait AsTypeRef {
     type Ref;
 
-    fn as_type_ref(&mut self) -> Self::Ref;
+    fn as_type_ref(&self) -> Self::Ref;
 }
 
 #[macro_export]

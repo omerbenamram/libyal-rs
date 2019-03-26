@@ -186,7 +186,7 @@ impl Volume {
     }
 
     /// Retrieves a file entry specified by the path.
-    pub fn get_file_entry_by_path(&mut self, path: impl AsRef<Path>) -> Result<FileEntry, Error> {
+    pub fn get_file_entry_by_path(&self, path: impl AsRef<Path>) -> Result<FileEntry, Error> {
         let mut file_entry = ptr::null_mut();
         let mut error = ptr::null_mut();
 
@@ -212,7 +212,7 @@ impl Volume {
     }
 
     /// Retrieves a specific file entry.
-    pub fn get_file_entry_by_mft_idx(&mut self, idx: MftEntryIndex) -> Result<FileEntry, Error> {
+    pub fn get_file_entry_by_mft_idx(&self, idx: MftEntryIndex) -> Result<FileEntry, Error> {
         let mut file_entry = ptr::null_mut();
         let mut error = ptr::null_mut();
 
@@ -232,7 +232,7 @@ impl Volume {
     }
 
     /// Retrieves the name.
-    pub fn get_name(&mut self) -> Result<String, Error> {
+    pub fn get_name(&self) -> Result<String, Error> {
         let mut name = vec![0; 1024];
         let mut error = ptr::null_mut();
 
@@ -258,7 +258,7 @@ impl Volume {
     }
 
     /// Retrieves the root directory.
-    fn get_root_directory(&mut self) -> Result<FileEntry, Error> {
+    fn get_root_directory(&self) -> Result<FileEntry, Error> {
         let mut file_entry = ptr::null_mut();
         let mut error = ptr::null_mut();
 
@@ -273,7 +273,7 @@ impl Volume {
     }
 
     /// Retrieves the number of file entries.
-    fn get_number_of_file_entries(&mut self) -> Result<usize, Error> {
+    fn get_number_of_file_entries(&self) -> Result<usize, Error> {
         let mut number_of_file_entries = 0;
         let mut error = ptr::null_mut();
 

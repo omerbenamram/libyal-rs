@@ -332,7 +332,7 @@ extern "C" {
 }
 
 impl Attribute {
-    pub fn get_name(&mut self) -> Result<String, Error> {
+    pub fn get_name(&self) -> Result<String, Error> {
         let mut name_size = 0_usize;
         let mut error = ptr::null_mut();
 
@@ -342,6 +342,10 @@ impl Attribute {
         {
             return Err(Error::try_from(error)?);
         };
+
+        if name_size == 0 {
+            return Ok(String::new());
+        }
 
         let mut name = vec![0; name_size];
         let mut error = ptr::null_mut();
@@ -362,7 +366,7 @@ impl Attribute {
         }
     }
 
-    pub fn get_type(&mut self) -> Result<AttributeType, Error> {
+    pub fn get_type(&self) -> Result<AttributeType, Error> {
         let mut type_as_num = 0_u32;
         let mut error = ptr::null_mut();
 
