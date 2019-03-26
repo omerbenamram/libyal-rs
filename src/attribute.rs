@@ -3,6 +3,8 @@ use crate::ffi::AsTypeRef;
 use crate::ffi_error::LibfsntfsErrorRef;
 use crate::libfsntfs::size64_t;
 use crate::utils::str_from_u8_nul_utf8_unchecked;
+use chrono::{Date, DateTime, NaiveDateTime, Utc};
+use log::error;
 use std::convert::TryFrom;
 use std::fmt::Debug;
 use std::os::raw::c_int;
@@ -19,24 +21,24 @@ impl_ffi_dtor!(Attribute, libfsntfs_attribute_free);
 
 #[derive(PartialOrd, PartialEq, Debug, Clone)]
 pub enum AttributeType {
-    AttributeTypeUnused = 0,
-    AttributeTypeStandardInformation = 16,
-    AttributeTypeAttributeList = 32,
-    AttributeTypeFileName = 48,
-    AttributeTypeObjectIdentifier = 64,
-    AttributeTypeSecurityDescriptor = 80,
-    AttributeTypeVolumeName = 96,
-    AttributeTypeVolumeInformation = 112,
-    AttributeTypeData = 128,
-    AttributeTypeIndexRoot = 144,
-    AttributeTypeIndexAllocation = 160,
-    AttributeTypeBitmap = 176,
-    AttributeTypeReparsePoint = 192,
-    AttributeTypeExtendedInformation = 208,
-    AttributeTypeExtended = 224,
-    AttributeTypePropertySet = 240,
-    AttributeTypeLoggedUtilityStream = 256,
-    AttributeTypeEndOfAttributes = 4294967295,
+    Unused = 0,
+    StandardInformation = 16,
+    AttributeList = 32,
+    FileName = 48,
+    ObjectIdentifier = 64,
+    SecurityDescriptor = 80,
+    VolumeName = 96,
+    VolumeInformation = 112,
+    Data = 128,
+    IndexRoot = 144,
+    IndexAllocation = 160,
+    Bitmap = 176,
+    ReparsePoint = 192,
+    ExtendedInformation = 208,
+    Extended = 224,
+    PropertySet = 240,
+    LoggedUtilityStream = 256,
+    EndOfAttributes = 4294967295,
 }
 
 impl TryFrom<u32> for AttributeType {
@@ -44,24 +46,24 @@ impl TryFrom<u32> for AttributeType {
 
     fn try_from(value: u32) -> Result<Self, Self::Error> {
         match value {
-            0 => Ok(AttributeType::AttributeTypeUnused),
-            16 => Ok(AttributeType::AttributeTypeStandardInformation),
-            32 => Ok(AttributeType::AttributeTypeAttributeList),
-            48 => Ok(AttributeType::AttributeTypeFileName),
-            64 => Ok(AttributeType::AttributeTypeObjectIdentifier),
-            80 => Ok(AttributeType::AttributeTypeSecurityDescriptor),
-            96 => Ok(AttributeType::AttributeTypeVolumeName),
-            112 => Ok(AttributeType::AttributeTypeVolumeInformation),
-            128 => Ok(AttributeType::AttributeTypeData),
-            144 => Ok(AttributeType::AttributeTypeIndexRoot),
-            160 => Ok(AttributeType::AttributeTypeIndexAllocation),
-            176 => Ok(AttributeType::AttributeTypeBitmap),
-            192 => Ok(AttributeType::AttributeTypeReparsePoint),
-            208 => Ok(AttributeType::AttributeTypeExtendedInformation),
-            224 => Ok(AttributeType::AttributeTypeExtended),
-            240 => Ok(AttributeType::AttributeTypePropertySet),
-            256 => Ok(AttributeType::AttributeTypeLoggedUtilityStream),
-            4294967295 => Ok(AttributeType::AttributeTypeEndOfAttributes),
+            0 => Ok(AttributeType::Unused),
+            16 => Ok(AttributeType::StandardInformation),
+            32 => Ok(AttributeType::AttributeList),
+            48 => Ok(AttributeType::FileName),
+            64 => Ok(AttributeType::ObjectIdentifier),
+            80 => Ok(AttributeType::SecurityDescriptor),
+            96 => Ok(AttributeType::VolumeName),
+            112 => Ok(AttributeType::VolumeInformation),
+            128 => Ok(AttributeType::Data),
+            144 => Ok(AttributeType::IndexRoot),
+            160 => Ok(AttributeType::IndexAllocation),
+            176 => Ok(AttributeType::Bitmap),
+            192 => Ok(AttributeType::ReparsePoint),
+            208 => Ok(AttributeType::ExtendedInformation),
+            224 => Ok(AttributeType::Extended),
+            240 => Ok(AttributeType::PropertySet),
+            256 => Ok(AttributeType::LoggedUtilityStream),
+            4294967295 => Ok(AttributeType::EndOfAttributes),
             _ => Err(Error::UnknownAttributeEnumVariant(value)),
         }
     }
@@ -347,6 +349,89 @@ extern "C" {
     ) -> c_int;
 }
 
+#[derive(Debug, Clone)]
+pub enum AttributeWithInformation {
+    StandardInformation(StandardInformation),
+    FileName(FileName),
+    SecurityDescriptor(SecurityDescriptor),
+    VolumeName(String),
+    VolumeInformation(VolumeInformation),
+
+    AttributeList(AttributeList),
+    ObjectIdentifier(ObjectIdentifier),
+    Data(Data),
+    IndexRoot(IndexRoot),
+    IndexAllocation(IndexAllocation),
+    Bitmap(Bitmap),
+    ReparsePoint(ReparsePoint),
+    ExtendedInformation(ExtendedInformation),
+    Extended(Extended),
+    PropertySet(PropertySet),
+    LoggedUtilityStream(LoggedUtilityStream),
+    EndOfAttributes(EndOfAttributes),
+}
+
+#[derive(Debug, Clone)]
+pub struct StandardInformation {
+    creation_time: Option<DateTime<Utc>>,
+    modification_time: Option<DateTime<Utc>>,
+    access_time: Option<DateTime<Utc>>,
+    entry_modification_time: Option<DateTime<Utc>>,
+    file_attribute_flags: u32,
+    owner_identifier: u32,
+    security_descriptor_identifier: u32,
+    update_sequence_number: u32,
+}
+
+#[derive(Debug, Clone)]
+pub struct FileName {
+    name: String,
+    parent_file_reference: u32,
+    creation_time: Option<DateTime<Utc>>,
+    modification_time: Option<DateTime<Utc>>,
+    access_time: Option<DateTime<Utc>>,
+    entry_modification_time: Option<DateTime<Utc>>,
+    file_attribute_flags: u32,
+}
+
+#[derive(Debug, Clone)]
+pub struct Data {
+    flags: u32,
+    range: u32,
+    size: u32,
+}
+
+#[derive(Debug, Clone)]
+pub struct VolumeInformation {
+    version: u32,
+    flags: u32,
+}
+
+#[derive(Debug, Clone)]
+pub struct AttributeList {}
+#[derive(Debug, Clone)]
+pub struct ObjectIdentifier {}
+#[derive(Debug, Clone)]
+pub struct SecurityDescriptor {}
+#[derive(Debug, Clone)]
+pub struct IndexRoot {}
+#[derive(Debug, Clone)]
+pub struct IndexAllocation {}
+#[derive(Debug, Clone)]
+pub struct Bitmap {}
+#[derive(Debug, Clone)]
+pub struct ReparsePoint {}
+#[derive(Debug, Clone)]
+pub struct ExtendedInformation {}
+#[derive(Debug, Clone)]
+pub struct Extended {}
+#[derive(Debug, Clone)]
+pub struct PropertySet {}
+#[derive(Debug, Clone)]
+pub struct LoggedUtilityStream {}
+#[derive(Debug, Clone)]
+pub struct EndOfAttributes {}
+
 impl Attribute {
     pub fn get_name(&self) -> Result<String, Error> {
         get_sized_utf8_string!(
@@ -354,6 +439,91 @@ impl Attribute {
             libfsntfs_attribute_get_utf8_name_size,
             libfsntfs_attribute_get_utf8_name
         )
+    }
+
+    pub fn get_data(&self) -> Result<AttributeWithInformation, Error> {
+        match self.get_type()? {
+            AttributeType::VolumeName => {
+                let volume_name = get_sized_utf8_string!(
+                    self,
+                    libfsntfs_volume_name_attribute_get_utf8_name_size,
+                    libfsntfs_volume_name_attribute_get_utf8_name
+                )?;
+
+                Ok(AttributeWithInformation::VolumeName(volume_name))
+            }
+            AttributeType::FileName => {
+                let name = get_sized_utf8_string!(
+                    self,
+                    libfsntfs_file_name_attribute_get_utf8_name_size,
+                    libfsntfs_file_name_attribute_get_utf8_name
+                )?;
+
+                let creation_time =
+                    get_date_field!(self, libfsntfs_file_name_attribute_get_creation_time)?;
+                let modification_time =
+                    get_date_field!(self, libfsntfs_file_name_attribute_get_modification_time)?;
+                let access_time =
+                    get_date_field!(self, libfsntfs_file_name_attribute_get_access_time)?;
+                let entry_modification_time = get_date_field!(
+                    self,
+                    libfsntfs_file_name_attribute_get_entry_modification_time
+                )?;
+
+                // TODO: implement
+                // let file_attribute_flags =libfsntfs_file_name_attribute_get_file_attribute_flags;
+
+                Ok(AttributeWithInformation::FileName(FileName {
+                    name,
+                    parent_file_reference: 0,
+                    creation_time,
+                    modification_time,
+                    access_time,
+                    entry_modification_time,
+                    file_attribute_flags: 0,
+                }))
+            }
+            AttributeType::StandardInformation => {
+                let creation_time = get_date_field!(
+                    self,
+                    libfsntfs_standard_information_attribute_get_creation_time
+                )?;
+                let modification_time = get_date_field!(
+                    self,
+                    libfsntfs_standard_information_attribute_get_modification_time
+                )?;
+                let access_time = get_date_field!(
+                    self,
+                    libfsntfs_standard_information_attribute_get_access_time
+                )?;
+                let entry_modification_time = get_date_field!(
+                    self,
+                    libfsntfs_standard_information_attribute_get_entry_modification_time
+                )?;
+
+                Ok(AttributeWithInformation::StandardInformation(
+                    StandardInformation {
+                        creation_time,
+                        modification_time,
+                        access_time,
+                        entry_modification_time,
+                        file_attribute_flags: 0,
+                        owner_identifier: 0,
+                        security_descriptor_identifier: 0,
+                        update_sequence_number: 0,
+                    },
+                ))
+            }
+            AttributeType::Data => Ok(AttributeWithInformation::Data(Data {
+                flags: 0,
+                range: 0,
+                size: 0,
+            })),
+            _ => Err(Error::Other(format!(
+                "Unimplemented data type: {:?}",
+                self.get_type().unwrap()
+            ))),
+        }
     }
 
     pub fn get_type(&self) -> Result<AttributeType, Error> {

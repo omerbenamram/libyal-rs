@@ -18,7 +18,8 @@ fn main() {
             .unwrap()
             .filter_map(|attr| attr.ok())
         {
-            println!("\t{:?}", attribute)
+            println!("\t{:?}", attribute);
+            println!("\t{:?}", attribute.get_data())
         }
     }
 }

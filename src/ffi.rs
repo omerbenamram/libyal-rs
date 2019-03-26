@@ -71,27 +71,49 @@ macro_rules! get_sized_utf8_string {
         };
 
         if name_size == 0 {
-            return Ok(String::new());
-        }
+            Ok(String::new())
+        } else {
+            let mut name = vec![0; name_size];
+            let mut error = ptr::null_mut();
 
-        let mut name = vec![0; name_size];
+            if unsafe {
+                $get_string(
+                    $self.as_type_ref(),
+                    name.as_mut_ptr(),
+                    name.len(),
+                    &mut error,
+                )
+            } != 1
+            {
+                Err(Error::try_from(error)?)
+            } else {
+                // Discard nul terminator;
+                name.pop().expect("name_size was checked to be > 0");
+                let s = String::from_utf8(name).map_err(|e| Error::StringContainsInvalidUTF8(e))?;
+                Ok(s)
+            }
+        }
+    }};
+}
+
+#[macro_export]
+macro_rules! get_date_field {
+    ($self: ident, $getter: ident) => {{
+        use chrono::prelude::*;
+        use crate::utils::datetime_from_filetime;
+
+        let mut date = 0_u64;
         let mut error = ptr::null_mut();
 
-        if unsafe {
-            $get_string(
-                $self.as_type_ref(),
-                name.as_mut_ptr(),
-                name.len(),
-                &mut error,
-            )
-        } != 1
-        {
+        if unsafe { $getter($self.as_type_ref(), &mut date, &mut error) } != 1 {
             Err(Error::try_from(error)?)
         } else {
-            // Discard nul terminator;
-            name.pop().expect("name_size was checked to be > 0");
-            let s = String::from_utf8(name).map_err(|e| Error::StringContainsInvalidUTF8(e))?;
-            Ok(s)
+            let date = if date > 0 {
+                Some(datetime_from_filetime(date))
+            } else {
+                None
+            };
+            Ok(date)
         }
     }};
 }

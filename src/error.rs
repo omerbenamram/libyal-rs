@@ -13,6 +13,8 @@ use std::str::Utf8Error;
 
 #[derive(Fail, Debug)]
 pub enum Error {
+    #[fail(display="Failed to convert date {}", _0)]
+    FailedToConvertDate(#[cause] chrono::ParseError),
     #[fail(display="AttributeType has no variant {}", _0)]
     UnknownAttributeEnumVariant(u32),
     #[fail(display="String is invalid UTF-8: {}", _0)]
