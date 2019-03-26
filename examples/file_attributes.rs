@@ -19,7 +19,7 @@ fn main() {
             .filter_map(|attr| attr.ok())
         {
             println!("\t{:?}", attribute);
-            println!("\t{:?}", attribute.get_data())
+            println!("\t{:#?}", attribute.get_data())
         }
     }
 }

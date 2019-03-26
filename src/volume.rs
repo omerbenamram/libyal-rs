@@ -178,8 +178,7 @@ impl Volume {
     pub fn open(filename: impl AsRef<str>, mode: AccessMode) -> Result<Self, Error> {
         let mut handle: VolumeRef = ptr::null_mut();
 
-        let mut c_string =
-            CString::new(filename.as_ref()).map_err(|e| Error::StringContainsNul(e))?;
+        let c_string = CString::new(filename.as_ref()).map_err(Error::StringContainsNul)?;
 
         let mut init_error: LibfsntfsErrorRef = ptr::null_mut();
 
@@ -190,7 +189,7 @@ impl Volume {
             return Err(Error::try_from(init_error)?);
         }
 
-        let mut volume = Volume::wrap_ptr(handle);
+        let volume = Volume::wrap_ptr(handle);
 
         let mut error = ptr::null_mut();
 
@@ -219,7 +218,7 @@ impl Volume {
 
     /// Retrieves the volume serial number.
     pub fn get_serial_number(&self) -> Result<SerialNumber, Error> {
-        let mut serial_number = 0_64;
+        let mut serial_number = 0_u64;
         let mut error = ptr::null_mut();
 
         if unsafe {

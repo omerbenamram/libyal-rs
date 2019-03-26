@@ -1,7 +1,8 @@
+use crate::error::Error;
+use crate::file_entry::FileEntry;
+use crate::volume::{AccessMode, Volume};
 use env_logger;
 use lazy_static::lazy_static;
-use crate::error::Error;
-use crate::volume::{Volume, AccessMode};
 use std::path::PathBuf;
 
 lazy_static! {
@@ -26,4 +27,9 @@ pub fn sample_volume_path() -> String {
 pub fn sample_volume() -> Result<Volume, Error> {
     let volume_path = sample_volume_path();
     Volume::open(&volume_path, AccessMode::Read)
+}
+
+pub fn file_entry() -> Result<FileEntry, Error> {
+    let volume = sample_volume().expect("Sample volume fixture should work");
+    volume.iter_entries().unwrap().take(1).next().unwrap()
 }

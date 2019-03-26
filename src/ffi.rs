@@ -97,10 +97,43 @@ macro_rules! get_sized_utf8_string {
 }
 
 #[macro_export]
+macro_rules! get_sized_bytes {
+    ($self: ident, $get_size: ident, $get_string: ident) => {{
+        let mut size = 0_usize;
+        let mut error = ptr::null_mut();
+
+        if unsafe { $get_size($self.as_type_ref(), &mut size, &mut error) } != 1 {
+            return Err(Error::try_from(error)?);
+        };
+
+        if size == 0 {
+            Ok(Vec::<u8>::new())
+        } else {
+            let mut data = vec![0; size];
+            let mut error = ptr::null_mut();
+
+            if unsafe {
+                $get_string(
+                    $self.as_type_ref(),
+                    data.as_mut_ptr(),
+                    data.len(),
+                    &mut error,
+                )
+            } != 1
+            {
+                Err(Error::try_from(error)?)
+            } else {
+                Ok(data)
+            }
+        }
+    }};
+}
+
+#[macro_export]
 macro_rules! get_date_field {
     ($self: ident, $getter: ident) => {{
-        use chrono::prelude::*;
         use crate::utils::datetime_from_filetime;
+        use chrono::prelude::*;
 
         let mut date = 0_u64;
         let mut error = ptr::null_mut();

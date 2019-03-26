@@ -20,6 +20,7 @@ impl_ffi_type!(Attribute, AttributeRef);
 impl_ffi_dtor!(Attribute, libfsntfs_attribute_free);
 
 #[derive(PartialOrd, PartialEq, Debug, Clone)]
+#[repr(C)]
 pub enum AttributeType {
     Unused = 0,
     StandardInformation = 16,
@@ -38,7 +39,7 @@ pub enum AttributeType {
     Extended = 224,
     PropertySet = 240,
     LoggedUtilityStream = 256,
-    EndOfAttributes = 4294967295,
+    EndOfAttributes = 4_294_967_295,
 }
 
 impl TryFrom<u32> for AttributeType {
@@ -78,7 +79,7 @@ impl Debug for Attribute {
                 &self
                     .get_type()
                     .and_then(|a| Ok(format!("{:?}", a)))
-                    .unwrap_or("".to_string()),
+                    .unwrap_or_else(|_| "".to_string()),
             )
             .finish()
     }
@@ -396,23 +397,27 @@ pub struct FileName {
 
 #[derive(Debug, Clone)]
 pub struct Data {
+    // TOOD: parse flags
     flags: u32,
-    range: u32,
+    vcn_range_first: u64,
+    vcn_range_last: u64,
     size: u32,
 }
 
 #[derive(Debug, Clone)]
 pub struct VolumeInformation {
     version: u32,
-    flags: u32,
+    // TODO: parse flags
+    flags: u16,
 }
+
+#[derive(Debug, Clone)]
+pub struct SecurityDescriptor(Vec<u8>);
 
 #[derive(Debug, Clone)]
 pub struct AttributeList {}
 #[derive(Debug, Clone)]
 pub struct ObjectIdentifier {}
-#[derive(Debug, Clone)]
-pub struct SecurityDescriptor {}
 #[derive(Debug, Clone)]
 pub struct IndexRoot {}
 #[derive(Debug, Clone)]
@@ -516,9 +521,22 @@ impl Attribute {
             }
             AttributeType::Data => Ok(AttributeWithInformation::Data(Data {
                 flags: 0,
-                range: 0,
+                vcn_range_first: 0,
+                vcn_range_last: 0,
                 size: 0,
             })),
+
+            AttributeType::SecurityDescriptor => {
+                let descriptor = get_sized_bytes!(
+                    self,
+                    libfsntfs_security_descriptor_attribute_get_security_descriptor_size,
+                    libfsntfs_security_descriptor_attribute_get_security_descriptor
+                )?;
+
+                Ok(AttributeWithInformation::SecurityDescriptor(
+                    SecurityDescriptor(descriptor),
+                ))
+            }
             _ => Err(Error::Other(format!(
                 "Unimplemented data type: {:?}",
                 self.get_type().unwrap()
