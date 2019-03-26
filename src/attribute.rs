@@ -1,14 +1,22 @@
+use crate::error::Error;
 use crate::ffi_error::LibfsntfsErrorRef;
+use crate::ffi::AsTypeRef;
 use crate::libfsntfs::size64_t;
+use crate::utils::str_from_u8_nul_utf8_unchecked;
+use std::convert::TryFrom;
 use std::os::raw::c_int;
+use std::ptr;
 
+#[repr(C)]
 pub struct __Attribute(isize);
 
 pub type AttributeRef = *mut __Attribute;
 
 declare_ffi_type!(Attribute, AttributeRef);
 impl_ffi_type!(Attribute, AttributeRef);
+impl_ffi_dtor!(Attribute, libfsntfs_attribute_free);
 
+#[derive(PartialOrd, PartialEq, Debug, Clone)]
 pub enum AttributeType {
     AttributeTypeUnused = 0,
     AttributeTypeStandardInformation = 16,
@@ -28,6 +36,34 @@ pub enum AttributeType {
     AttributeTypePropertySet = 240,
     AttributeTypeLoggedUtilityStream = 256,
     AttributeTypeEndOfAttributes = 4294967295,
+}
+
+impl TryFrom<u32> for AttributeType {
+    type Error = Error;
+
+    fn try_from(value: u32) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(AttributeType::AttributeTypeUnused),
+            16 => Ok(AttributeType::AttributeTypeStandardInformation),
+            32 => Ok(AttributeType::AttributeTypeAttributeList),
+            48 => Ok(AttributeType::AttributeTypeFileName),
+            64 => Ok(AttributeType::AttributeTypeObjectIdentifier),
+            80 => Ok(AttributeType::AttributeTypeSecurityDescriptor),
+            96 => Ok(AttributeType::AttributeTypeVolumeName),
+            112 => Ok(AttributeType::AttributeTypeVolumeInformation),
+            128 => Ok(AttributeType::AttributeTypeData),
+            144 => Ok(AttributeType::AttributeTypeIndexRoot),
+            160 => Ok(AttributeType::AttributeTypeIndexAllocation),
+            176 => Ok(AttributeType::AttributeTypeBitmap),
+            192 => Ok(AttributeType::AttributeTypeReparsePoint),
+            208 => Ok(AttributeType::AttributeTypeExtendedInformation),
+            224 => Ok(AttributeType::AttributeTypeExtended),
+            240 => Ok(AttributeType::AttributeTypePropertySet),
+            256 => Ok(AttributeType::AttributeTypeLoggedUtilityStream),
+            4294967295 => Ok(AttributeType::AttributeTypeEndOfAttributes),
+            _ => Err(Error::UnknownAttributeEnumVariant(value)),
+        }
+    }
 }
 
 extern "C" {
@@ -293,4 +329,49 @@ extern "C" {
         utf16_name_size: usize,
         error: *mut LibfsntfsErrorRef,
     ) -> c_int;
+}
+
+impl Attribute {
+    pub fn get_name(&mut self) -> Result<String, Error> {
+        let mut name_size = 0_usize;
+        let mut error = ptr::null_mut();
+
+        if unsafe {
+            libfsntfs_attribute_get_utf8_name_size(self.as_type_ref(), &mut name_size, &mut error)
+        } != 1
+        {
+            return Err(Error::try_from(error)?);
+        };
+
+        let mut name = vec![0; name_size];
+        let mut error = ptr::null_mut();
+
+        if unsafe {
+            libfsntfs_attribute_get_utf8_name(
+                self.as_type_ref(),
+                name.as_mut_ptr(),
+                name.len(),
+                &mut error,
+            )
+        } != 1
+        {
+            Err(Error::try_from(error)?)
+        } else {
+            let s = unsafe { str_from_u8_nul_utf8_unchecked(&name) };
+            Ok(s.to_string())
+        }
+    }
+
+    pub fn get_type(&mut self) -> Result<AttributeType, Error> {
+        let mut type_as_num = 0_u32;
+        let mut error = ptr::null_mut();
+
+        if unsafe { libfsntfs_attribute_get_type(self.as_type_ref(), &mut type_as_num, &mut error) }
+            != 1
+        {
+            Err(Error::try_from(error)?)
+        } else {
+            Ok(AttributeType::try_from(type_as_num)?)
+        }
+    }
 }

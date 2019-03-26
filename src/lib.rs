@@ -1,3 +1,5 @@
+#![allow(unused_imports)]
+
 #[macro_use]
 pub mod ffi;
 
@@ -8,3 +10,6 @@ pub mod error;
 pub mod ffi_error;
 pub mod attribute;
 mod utils;
+
+#[cfg(test)]
+mod fixtures;

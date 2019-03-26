@@ -23,6 +23,7 @@ pub type VolumeRef = *mut __Volume;
 
 declare_ffi_type!(Volume, VolumeRef);
 impl_ffi_type!(Volume, VolumeRef);
+impl_ffi_dtor!(Volume, libfsntfs_volume_free);
 
 extern "C" {
     /// Creates a volume
@@ -301,36 +302,12 @@ impl Volume {
     }
 }
 
-impl Drop for Volume {
-    fn drop(&mut self) {
-        unsafe {
-            libfsntfs_volume_free(&mut self.as_type_ref() as *mut _, ptr::null_mut());
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::fixtures::*;
+    use log::{trace, info};
     use std::path::PathBuf;
-
-    fn sample_volume_path() -> String {
-        let this_file = file!();
-        let sample = PathBuf::from(this_file)
-            .parent()
-            .unwrap()
-            .parent()
-            .unwrap()
-            .join("examples")
-            .join("ntfs-img-kw-1.dd");
-
-        sample.to_str().unwrap().to_string()
-    }
-
-    fn sample_volume() -> Result<Volume, Error> {
-        let volume_path = sample_volume_path();
-        Volume::open(&volume_path, AccessMode::Read)
-    }
 
     #[test]
     fn test_opens_volume_works() {

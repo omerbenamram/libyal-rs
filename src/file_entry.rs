@@ -4,10 +4,13 @@ use crate::error::Error;
 use crate::ffi::AsTypeRef;
 use crate::ffi_error::{LibfsntfsError, LibfsntfsErrorRef};
 use crate::libfsntfs::{libfsntfs_attribute_t, libfsntfs_data_stream_t, off64_t, size64_t};
+use crate::attribute::{Attribute, AttributeRef};
 use std::convert::TryFrom;
 use std::ffi::c_void;
+use std::option::Iter;
 use std::os::raw::c_int;
-use std::{mem, ptr};
+use std::{mem, ptr, fmt};
+use std::fmt::{Debug, Formatter};
 
 #[repr(C)]
 pub struct __FileEntry(isize);
@@ -16,6 +19,15 @@ pub type FileEntryRef = *mut __FileEntry;
 
 declare_ffi_type!(FileEntry, FileEntryRef);
 impl_ffi_type!(FileEntry, FileEntryRef);
+impl_ffi_dtor!(FileEntry, libfsntfs_file_entry_free);
+
+//impl Debug for FileEntry {
+//    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+//        f.debug_struct("FileEntry")
+//            .field("Name", self.get_name().map_err("Failed"))
+//            .field("Type", self.get_)
+//    }
+//}
 
 extern "C" {
     #[link_name = "\u{1}_libfsntfs_file_entry_free"]
@@ -231,7 +243,7 @@ extern "C" {
     pub fn libfsntfs_file_entry_get_attribute_by_index(
         file_entry: FileEntryRef,
         attribute_index: c_int,
-        attribute: *mut *mut libfsntfs_attribute_t,
+        attribute: *mut AttributeRef,
         error: *mut LibfsntfsErrorRef,
     ) -> c_int;
     #[link_name = "\u{1}_libfsntfs_file_entry_has_directory_entries_index"]
@@ -367,9 +379,21 @@ extern "C" {
     ) -> c_int;
 }
 
-impl Drop for FileEntry {
-    fn drop(&mut self) {
-        unsafe { libfsntfs_file_entry_free(&mut self.as_type_ref() as *mut _, ptr::null_mut()) };
+pub struct IterAttributes<'a> {
+    handle: &'a mut FileEntry,
+    num_attributes: u32,
+    idx: i32,
+}
+
+impl<'a> Iterator for IterAttributes<'a> {
+    type Item = Result<Attribute, Error>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        for i in 0..self.num_attributes {
+            return Some(self.handle.get_attribute_by_index(i as i32));
+        }
+
+        None
     }
 }
 
@@ -405,8 +429,51 @@ impl FileEntry {
         unimplemented!();
     }
 
-    pub fn get_attribute(&self, attribute_index: isize) {
-        unimplemented!();
+    pub fn iter_attributes(&mut self) -> Result<IterAttributes, Error> {
+        let number_of_attributes = self.get_number_of_attributes()? as u32;
+
+        Ok(IterAttributes {
+            handle: self,
+            num_attributes: number_of_attributes,
+            idx: 0,
+        })
+    }
+
+    pub fn get_number_of_attributes(&mut self) -> Result<c_int, Error> {
+        let mut num_attributes = 0_i32;
+        let mut error = ptr::null_mut();
+
+        if unsafe {
+            libfsntfs_file_entry_get_number_of_attributes(
+                self.as_type_ref(),
+                &mut num_attributes,
+                &mut error,
+            )
+        } != 1
+        {
+            Err(Error::try_from(error)?)
+        } else {
+            Ok(num_attributes)
+        }
+    }
+
+    pub fn get_attribute_by_index(&mut self, attribute_index: i32) -> Result<Attribute, Error> {
+        let mut attribute = ptr::null_mut();
+        let mut error = ptr::null_mut();
+
+        if unsafe {
+            libfsntfs_file_entry_get_attribute_by_index(
+                self.as_type_ref(),
+                attribute_index,
+                &mut attribute,
+                &mut error,
+            )
+        } != 1
+        {
+            Err(Error::try_from(error)?)
+        } else {
+            Ok(Attribute::wrap_ptr(attribute))
+        }
     }
 
     pub fn get_base_record_file_reference(&self) {
@@ -466,10 +533,6 @@ impl FileEntry {
     }
 
     pub fn get_number_of_alternate_data_streams(&self) {
-        unimplemented!();
-    }
-
-    pub fn get_number_of_attributes(&self) {
         unimplemented!();
     }
 
@@ -547,5 +610,26 @@ impl FileEntry {
     }
     pub fn tell(&self) {
         unimplemented!();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::fixtures::*;
+    use log::{trace, info};
+    use std::path::PathBuf;
+
+    #[test]
+    fn test_iter_attributes() {
+        let mut volume = sample_volume().unwrap();
+        let mut file_attribute = volume.get_file_entry_by_mft_idx(0).unwrap();
+
+        for attribute_result in file_attribute.iter_attributes().unwrap() {
+            let mut attribute = attribute_result.unwrap();
+
+            println!("{:?}", attribute.get_name().unwrap());
+            println!("{:?}", attribute.get_type().unwrap());
+        }
     }
 }

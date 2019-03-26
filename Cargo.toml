@@ -7,7 +7,12 @@ links = "libfsntfs"
 
 [dependencies]
 chrono = "0.4.6"
+log = "*"
 failure = "*"
+
+[dev-dependencies]
+env_logger = "*"
+lazy_static = "*"
 
 [[example]]
 name = "file_attributes"
