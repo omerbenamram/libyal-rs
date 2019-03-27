@@ -2,6 +2,7 @@ use crate::error::Error;
 use crate::ffi::AsTypeRef;
 use crate::libfsntfs::FILE;
 use std::convert::TryFrom;
+use log::trace;
 use std::ffi::{c_void, CStr};
 use std::fmt::{self, Display, Formatter};
 use std::mem;

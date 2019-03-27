@@ -690,12 +690,33 @@ mod tests {
     fn test_read() {
         let volume = sample_volume().unwrap();
         let mut entry = file_entry(&volume).unwrap();
-        entries_with_data(&volume);
 
         let mut buf = vec![0; 10];
         entry.read(&mut buf).unwrap();
-        dbg!(&buf);
 
-        assert!(!buf.is_empty())
+        assert_eq!(buf, [70, 73, 76, 69, 48, 0, 3, 0, 181, 104]);
+    }
+
+    #[test]
+    fn test_seek() {
+        let volume = sample_volume().unwrap();
+        let mut entry = file_entry(&volume).unwrap();
+
+        let mut buf = vec![0; 10];
+        entry.seek(SeekFrom::Start(10)).unwrap();
+        entry.read(&mut buf).unwrap();
+
+        assert_eq!(buf, [16, 0, 0, 0, 0, 0, 1, 0, 1, 0]);
+    }
+
+    #[test]
+    fn test_read_to_end() {
+        let volume = sample_volume().unwrap();
+        let mut entry = file_entry(&volume).unwrap();
+
+        let mut buf = Vec::new();
+        entry.read_to_end(&mut buf).unwrap();
+
+        assert_eq!(buf.len(), 75776);
     }
 }
