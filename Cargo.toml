@@ -26,6 +26,7 @@ failure = "*"
 default = []
 
 # Use when building static bindings
+# it's possible to define LIBFSNTFS_STATIC_LIBPATH to build against local checkout of the library.
 static_link = []
 
 [[example]]

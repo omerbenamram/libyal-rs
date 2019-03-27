@@ -52,7 +52,11 @@ fn download_libfsntfs() -> Result<PathBuf, Error> {
 }
 
 fn build_static() {
-    let libfsntfs = download_libfsntfs().expect("Failed to download libfsntfs");
+    let libfsntfs = if let Ok(local_install) = env::var("LIBFSNTFS_STATIC_LIBPATH") {
+        PathBuf::from(local_install)
+    } else {
+        download_libfsntfs().expect("Failed to download libfsntfs")
+    };
 
     let target = libfsntfs.join("dist");
 
