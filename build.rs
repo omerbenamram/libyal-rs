@@ -13,29 +13,32 @@ static LIBFSNTFS_EXPECTED_DIR_NAME: &'static str = "libfsntfs-20190104";
 
 fn download_libfsntfs() -> Result<PathBuf, Error> {
     let temp = PathBuf::from(env::var("OUT_DIR").unwrap());
-    println!("Downloading libfsntfs: from '{}'", LIBFSNTFS_TAR_GZ_URL);
-    let mut response = reqwest::get(LIBFSNTFS_TAR_GZ_URL)?;
-
-    let (mut dest, p) = {
-        let fname = response
-            .url()
-            .path_segments()
-            .and_then(|segments| segments.last())
-            .and_then(|name| if name.is_empty() { None } else { Some(name) })
-            .unwrap_or("tmp.bin");
-
-        let fname = temp.join(fname);
-        (File::create(&fname)?, fname)
-    };
-
-    io::copy(&mut response, &mut dest)?;
-
-    let tar_gz = File::open(p)?;
-    let tar = GzDecoder::new(tar_gz);
-    let mut archive = Archive::new(tar);
-    archive.unpack(&temp)?;
-
     let expected_path = temp.join(LIBFSNTFS_EXPECTED_DIR_NAME);
+
+    // rust can cache the build directory for us when developing
+    if !expected_path.exists() {
+        println!("Downloading libfsntfs: from '{}'", LIBFSNTFS_TAR_GZ_URL);
+        let mut response = reqwest::get(LIBFSNTFS_TAR_GZ_URL)?;
+
+        let (mut dest, p) = {
+            let fname = response
+                .url()
+                .path_segments()
+                .and_then(|segments| segments.last())
+                .and_then(|name| if name.is_empty() { None } else { Some(name) })
+                .unwrap_or("tmp.bin");
+
+            let fname = temp.join(fname);
+            (File::create(&fname)?, fname)
+        };
+
+        io::copy(&mut response, &mut dest)?;
+
+        let tar_gz = File::open(p)?;
+        let tar = GzDecoder::new(tar_gz);
+        let mut archive = Archive::new(tar);
+        archive.unpack(&temp)?;
+    }
 
     if !expected_path.exists() {
         bail!(
@@ -62,14 +65,14 @@ fn build_static() {
         .current_dir(&libfsntfs)
         .stderr(Stdio::inherit())
         .stdout(Stdio::inherit())
-        .spawn()
+        .status()
         .expect("configure failed");
 
     Command::new("make")
         .current_dir(&libfsntfs)
         .stderr(Stdio::inherit())
         .stdout(Stdio::inherit())
-        .spawn()
+        .status()
         .expect("make failed");
 
     Command::new("make")
@@ -77,7 +80,7 @@ fn build_static() {
         .current_dir(&libfsntfs)
         .stderr(Stdio::inherit())
         .stdout(Stdio::inherit())
-        .spawn()
+        .status()
         .expect("make install failed");
 
     assert!(
