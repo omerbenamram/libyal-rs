@@ -80,6 +80,12 @@ fn build_static() {
         .spawn()
         .expect("make install failed");
 
+    assert!(
+        target.join("lib").exists(),
+        "Expected {} to exist",
+        target.join("lib").display()
+    );
+
     println!("cargo:rustc-link-lib=static=fsntfs");
     println!(
         "cargo:rustc-link-search=native={}",
@@ -99,11 +105,11 @@ fn link_dynamic() {
 }
 
 fn main() {
-    if let Ok(v) = env::var("LIBFSNTFS_ENABLE_STATIC") {
-        if v == "1" {
-            return build_static();
-        }
+    if cfg!(feature = "static_link") {
+        println!("Building static bindings");
+        return build_static();
     } else {
+        println!("Building dynamic bindings");
         return link_dynamic();
     }
 }

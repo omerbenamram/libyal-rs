@@ -31,7 +31,7 @@ pub fn sample_volume() -> Result<Volume, Error> {
 }
 
 pub fn entries_with_data(volume: &Volume) {
-    let mut entries: Vec<FileEntry> = volume
+    let entries: Vec<FileEntry> = volume
         .iter_entries()
         .unwrap()
         .filter_map(|f| f.ok())
@@ -59,7 +59,7 @@ pub fn entries_with_data(volume: &Volume) {
 }
 
 pub fn file_entry(volume: &Volume) -> Result<FileEntry, Error> {
-    let mut entries: Vec<FileEntry> = volume
+    let entries: Vec<FileEntry> = volume
         .iter_entries()
         .unwrap()
         .filter_map(|f| f.ok())

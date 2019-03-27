@@ -21,6 +21,13 @@ flate2 = "*"
 tar = "*"
 failure = "*"
 
+[features]
+
+default = []
+
+# Use when building static bindings
+static_link = []
+
 [[example]]
 name = "file_attributes"
 path = "examples/file_attributes.rs"

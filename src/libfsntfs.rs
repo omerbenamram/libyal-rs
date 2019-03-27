@@ -3030,10 +3030,6 @@ extern "C" {
     pub fn wcstof(arg1: *const wchar_t, arg2: *mut *mut wchar_t) -> f32;
 }
 extern "C" {
-    #[link_name = "\u{1}_wcstold"]
-    pub fn wcstold(arg1: *const wchar_t, arg2: *mut *mut wchar_t) -> u128;
-}
-extern "C" {
     #[link_name = "\u{1}_wcstoll"]
     pub fn wcstoll(
         arg1: *const wchar_t,
