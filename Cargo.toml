@@ -15,6 +15,12 @@ failure = "*"
 env_logger = "*"
 lazy_static = "*"
 
+[build-dependencies]
+reqwest = "*"
+flate2 = "*"
+tar = "*"
+failure = "*"
+
 [[example]]
 name = "file_attributes"
 path = "examples/file_attributes.rs"
