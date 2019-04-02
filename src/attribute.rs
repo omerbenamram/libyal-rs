@@ -419,41 +419,41 @@ pub enum AttributeWithInformation {
 
 #[derive(Debug, Clone)]
 pub struct StandardInformation {
-    creation_time: Option<DateTime<Utc>>,
-    modification_time: Option<DateTime<Utc>>,
-    access_time: Option<DateTime<Utc>>,
-    entry_modification_time: Option<DateTime<Utc>>,
-    file_attribute_flags: u32,
-    owner_identifier: u32,
-    security_descriptor_identifier: u32,
-    update_sequence_number: u32,
+    pub creation_time: Option<DateTime<Utc>>,
+    pub modification_time: Option<DateTime<Utc>>,
+    pub access_time: Option<DateTime<Utc>>,
+    pub entry_modification_time: Option<DateTime<Utc>>,
+    pub file_attribute_flags: u32,
+    pub owner_identifier: u32,
+    pub security_descriptor_identifier: u32,
+    pub update_sequence_number: u32,
 }
 
 #[derive(Debug, Clone)]
 pub struct FileName {
-    name: String,
-    parent_file_reference: u32,
-    creation_time: Option<DateTime<Utc>>,
-    modification_time: Option<DateTime<Utc>>,
-    access_time: Option<DateTime<Utc>>,
-    entry_modification_time: Option<DateTime<Utc>>,
-    file_attribute_flags: u32,
+    pub name: String,
+    pub parent_file_reference: u32,
+    pub creation_time: Option<DateTime<Utc>>,
+    pub modification_time: Option<DateTime<Utc>>,
+    pub access_time: Option<DateTime<Utc>>,
+    pub entry_modification_time: Option<DateTime<Utc>>,
+    pub file_attribute_flags: u32,
 }
 
 #[derive(Debug, Clone)]
 pub struct Data {
     // TOOD: parse flags
-    flags: u32,
-    vcn_range_first: u64,
-    vcn_range_last: u64,
-    size: u32,
+    pub flags: u32,
+    pub vcn_range_first: u64,
+    pub vcn_range_last: u64,
+    pub size: u32,
 }
 
 #[derive(Debug, Clone)]
 pub struct VolumeInformation {
-    version: u32,
+    pub version: u32,
     // TODO: parse flags
-    flags: u16,
+    pub flags: u16,
 }
 
 #[derive(Debug, Clone)]
