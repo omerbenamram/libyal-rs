@@ -3,7 +3,7 @@ name = "libfsntfs-sys"
 description = "Rust bindings for libfsntfs (https://github.com/libyal/libfsntfs)"
 homepage = "https://github.com/omerbenamram/libfsntfs-sys"
 repository = "https://github.com/omerbenamram/libfsntfs-sys"
-license = "LGPL3"
+license = "LGPL-3.0+"
 
 readme = "README.md"
 version = "0.1.0"
