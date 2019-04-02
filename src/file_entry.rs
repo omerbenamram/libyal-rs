@@ -397,6 +397,27 @@ impl<'a> Iterator for IterAttributes<'a> {
     }
 }
 
+pub struct IterSubEntries<'a> {
+    handle: &'a FileEntry<'a>,
+    num_sub_entries: u32,
+    idx: u32,
+}
+
+impl<'a> Iterator for IterSubEntries<'a> {
+    type Item = Result<FileEntry<'a>, Error>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.idx < self.num_sub_entries {
+            let sub_entry = self.handle.get_sub_file_entry(self.idx as isize);
+            self.idx += 1;
+
+            return Some(sub_entry);
+        }
+
+        None
+    }
+}
+
 impl<'a> Read for FileEntry<'a> {
     fn read(&mut self, buf: &mut [u8]) -> Result<usize, io::Error> {
         let mut error = ptr::null_mut();
@@ -514,6 +535,16 @@ impl<'a> FileEntry<'a> {
         })
     }
 
+    pub fn iter_sub_entries(&self) -> Result<IterSubEntries, Error> {
+        let number_sub_entries = self.get_number_of_sub_file_entries()? as u32;
+
+        Ok(IterSubEntries {
+            handle: self,
+            num_sub_entries: number_sub_entries,
+            idx: 0,
+        })
+    }
+
     pub fn get_number_of_attributes(&self) -> Result<c_int, Error> {
         let mut num_attributes = 0_i32;
         let mut error = ptr::null_mut();
@@ -557,6 +588,61 @@ impl<'a> FileEntry<'a> {
             libfsntfs_file_entry_get_utf8_name_size,
             libfsntfs_file_entry_get_utf8_name
         )
+    }
+
+    pub fn get_sub_file_entry(&self, sub_file_entry_index: i32) -> Result<FileEntry, Error> {
+        let mut sub_entry = ptr::null_mut();
+        let mut error = ptr::null_mut();
+
+        if unsafe {
+            libfsntfs_file_entry_get_sub_file_entry_by_index(
+                self.as_type_ref(),
+                sub_file_entry_index,
+                &mut sub_entry,
+                &mut error,
+            )
+        } != 1
+        {
+            Err(Error::try_from(error)?)
+        } else {
+            Ok(FileEntry::wrap_ptr(self.1, sub_entry))
+        }
+    }
+
+    pub fn get_number_of_sub_file_entries(&self) -> Result<c_int, Error> {
+        let mut number_of_file_entries = 0;
+        let mut error = ptr::null_mut();
+
+        if unsafe {
+            libfsntfs_file_entry_get_number_of_sub_file_entries(
+                self.as_type_ref(),
+                &mut number_of_file_entries,
+                &mut error,
+            )
+        } != 1
+        {
+            Err(Error::try_from(error)?)
+        } else {
+            Ok(number_of_file_entries)
+        }
+    }
+
+    pub fn get_parent_file_reference(&self) -> Result<u64, Error> {
+        let mut parent_file_idx = 0;
+        let mut error = ptr::null_mut();
+
+        if unsafe {
+            libfsntfs_file_entry_get_parent_file_reference(
+                self.as_type_ref(),
+                &mut parent_file_idx,
+                &mut error,
+            )
+        } != 1
+        {
+            Err(Error::try_from(error)?)
+        } else {
+            Ok(parent_file_idx)
+        }
     }
 
     pub fn get_base_record_file_reference(&self) {
@@ -619,14 +705,6 @@ impl<'a> FileEntry<'a> {
         unimplemented!();
     }
 
-    pub fn get_number_of_sub_file_entries(&self) {
-        unimplemented!();
-    }
-
-    pub fn get_parent_file_reference(&self) {
-        unimplemented!();
-    }
-
     pub fn get_parent_file_reference_by_attribute_index(&self, attribute_index: isize) {
         unimplemented!();
     }
@@ -640,10 +718,6 @@ impl<'a> FileEntry<'a> {
     }
 
     pub fn get_security_descriptor_data(&self) {
-        unimplemented!();
-    }
-
-    pub fn get_sub_file_entry(&self, sub_file_entry_index: isize) {
         unimplemented!();
     }
 
