@@ -329,7 +329,7 @@ impl<'a> Volume {
     }
 
     /// Retrieves the root directory.
-    fn get_root_directory(&self) -> Result<FileEntry, Error> {
+    pub fn get_root_directory(&self) -> Result<FileEntry, Error> {
         let mut file_entry = ptr::null_mut();
         let mut error = ptr::null_mut();
 
@@ -344,7 +344,7 @@ impl<'a> Volume {
     }
 
     /// Retrieves the number of file entries.
-    fn get_number_of_file_entries(&self) -> Result<usize, Error> {
+    pub fn get_number_of_file_entries(&self) -> Result<usize, Error> {
         let mut number_of_file_entries = 0;
         let mut error = ptr::null_mut();
 
