@@ -1,15 +1,22 @@
 [package]
 name = "libfsntfs-sys"
+description = "Rust bindings for libfsntfs (https://github.com/libyal/libfsntfs)"
+homepage = "https://github.com/omerbenamram/libfsntfs-sys"
+repository = "https://github.com/omerbenamram/libfsntfs-sys"
+license = "LGPL3"
+
+readme = "README.md"
 version = "0.1.0"
 authors = ["Omer Ben-Amram <omerbenamram@gmail.com>"]
 edition = "2018"
 links = "libfsntfs"
 
+
 [dependencies]
 chrono = "0.4.6"
 time = "0.1.42"
 log = "0.4.6"
-failure = "*"
+failure = "0.1.5"
 
 [dev-dependencies]
 env_logger = "0.6.1"
