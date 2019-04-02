@@ -8,18 +8,18 @@ links = "libfsntfs"
 [dependencies]
 chrono = "0.4.6"
 time = "0.1.42"
-log = "*"
+log = "0.4.6"
 failure = "*"
 
 [dev-dependencies]
-env_logger = "*"
-lazy_static = "*"
+env_logger = "0.6.1"
+lazy_static = "1.3.0"
 
 [build-dependencies]
-reqwest = "*"
-flate2 = "*"
-tar = "*"
-failure = "*"
+reqwest = "0.9.13"
+flate2 = "1.0.7"
+tar = "0.4.22"
+failure = "0.1.5"
 
 [features]
 
