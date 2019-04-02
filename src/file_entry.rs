@@ -408,7 +408,7 @@ impl<'a> Iterator for IterSubEntries<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.idx < self.num_sub_entries {
-            let sub_entry = self.handle.get_sub_file_entry(self.idx as isize);
+            let sub_entry = self.handle.get_sub_file_entry(self.idx as i32);
             self.idx += 1;
 
             return Some(sub_entry);
