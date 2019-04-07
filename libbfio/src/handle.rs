@@ -1,6 +1,8 @@
+use libyal_rs_common::ffi::AsTypeRef;
 use std::fs::File;
 use std::os::raw::c_int;
 use std::ptr;
+use crate::libbfio::*;
 
 #[repr(C)]
 pub struct __Handle(isize);
@@ -11,13 +13,12 @@ pub type HandleRef = *const __Handle;
 #[repr(C)]
 pub struct Handle<'a>(HandleRefMut, &'a File);
 
-impl<'a> crate::ffi::AsTypeRef for Handle<'a> {
+impl<'a> AsTypeRef for Handle<'a> {
     type Ref = HandleRef;
     type RefMut = FileEntryRefMut;
 
     #[inline]
     fn as_type_ref(&self) -> Self::Ref {
-        // https://users.rust-lang.org/t/is-it-ub-to-convert-t-to-mut-t/16238/4
         self.0 as *const _
     }
 
@@ -40,18 +41,18 @@ impl<'a> Handle<'a> {
 
 impl<'a> Drop for Handle<'a> {
     fn drop(&mut self) {
-        use crate::ffi::AsTypeRef;
+        use libyal_rs_common::ffi::AsTypeRef;
         use log::trace;
 
         let mut error = ptr::null_mut();
 
-        trace!("Calling `libfsntfs_file_entry_free`");
+        trace!("Calling `{}`", function!());
 
         unsafe {
-            libfsntfs_file_entry_free(&mut self.as_type_ref_mut() as *mut _, &mut error);
+            libbfio_handle_free(&mut self.as_type_ref_mut() as *mut _, &mut error);
         }
 
-        debug_assert!(error.is_null(), "`libfsntfs_file_entry_free` failed!");
+        debug_assert!(error.is_null(), "`{}` failed!", function!());
     }
 }
 

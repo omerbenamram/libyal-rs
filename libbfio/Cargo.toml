@@ -6,3 +6,4 @@ edition = "2018"
 
 [dependencies]
 libbfio-sys = {path = "../libbfio-sys"}
+libyal-rs-common = {path = "../common"}
