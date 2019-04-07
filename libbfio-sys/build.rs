@@ -1,69 +1,39 @@
 extern crate bindgen;
 
 use failure::{bail, Error};
-use flate2::read::GzDecoder;
-use reqwest;
 use std::env;
 use std::fs::File;
 use std::io;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
-use tar::Archive;
 
-static LIBBFIO_TAR_GZ_URL: &'static str =
-    "https://github.com/libyal/libbfio/releases/download/20190112/libbfio-alpha-20190112.tar.gz";
-static LIBBFIO_EXPECTED_DIR_NAME: &'static str = "libbfio-20190112";
-
-fn download_libbfio() -> Result<PathBuf, Error> {
-    let temp = PathBuf::from(env::var("OUT_DIR").unwrap());
-    let expected_path = temp.join(LIBBFIO_EXPECTED_DIR_NAME);
-
-    // rust can cache the build directory for us when developing
-    if !expected_path.exists() {
-        println!("Downloading LIBBFIO: from '{}'", LIBBFIO_TAR_GZ_URL);
-        let mut response = reqwest::get(LIBBFIO_TAR_GZ_URL)?;
-
-        let (mut dest, p) = {
-            let fname = response
-                .url()
-                .path_segments()
-                .and_then(|segments| segments.last())
-                .and_then(|name| if name.is_empty() { None } else { Some(name) })
-                .unwrap_or("tmp.bin");
-
-            let fname = temp.join(fname);
-            (File::create(&fname)?, fname)
-        };
-
-        io::copy(&mut response, &mut dest)?;
-
-        let tar_gz = File::open(p)?;
-        let tar = GzDecoder::new(tar_gz);
-        let mut archive = Archive::new(tar);
-        archive.unpack(&temp)?;
-    }
-
-    if !expected_path.exists() {
-        bail!(
-            "Expected to find `{}` at `{}`",
-            LIBBFIO_EXPECTED_DIR_NAME,
-            temp.display()
-        );
-    }
-
-    Ok(expected_path)
-}
 
 fn build_static() -> Option<PathBuf> {
     let libbfio = if let Ok(local_install) = env::var("LIBBFIO_STATIC_LIBPATH") {
         PathBuf::from(local_install)
     } else {
-        download_libbfio().expect("Failed to download libbfio")
+        env::current_dir().unwrap().join("libbfio")
     };
 
     let target = libbfio.join("dist");
 
     println!("building with prefix={}", target.display());
+
+    Command::new("sh")
+        .arg("synclibs.sh")
+        .current_dir(&libbfio)
+        .stderr(Stdio::inherit())
+        .stdout(Stdio::inherit())
+        .status()
+        .expect("synclibs failed");
+
+    Command::new("sh")
+        .arg("autogen.sh")
+        .current_dir(&libbfio)
+        .stderr(Stdio::inherit())
+        .stdout(Stdio::inherit())
+        .status()
+        .expect("autogen failed");
 
     Command::new("sh")
         .arg("configure")
