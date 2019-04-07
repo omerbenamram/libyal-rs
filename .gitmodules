@@ -1,9 +1,0 @@
-[submodule "libfsntfs"]
-	path = libfsntfs-sys/libfsntfs
-	url = https://github.com/libyal/libfsntfs.git
-	branch = master
-
-[submodule "libbfio"]
-	path = libbfio-sys/libbfio
-	url = https://github.com/libyal/libbfio.git
-	branch = master
