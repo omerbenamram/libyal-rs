@@ -100,18 +100,21 @@ fn main() {
         link_dynamic()
     };
 
-    let target = target.unwrap();
-
     // The bindgen::Builder is the main entry point
     // to bindgen, and lets you build up options for
     // the resulting bindings.
-    let bindings = bindgen::Builder::default()
+    let builder = bindgen::Builder::default()
         // The input header we would like to generate
         // bindings for.
-        .header("wrapper.h")
-        .clang_args(&[
-            format!("-I{}/include", target.to_string_lossy()),
-        ])
+        .header("wrapper.h");
+
+    let builder = if let Some(target) = target {
+        builder.clang_args(&[format!("-I{}/include", target.to_string_lossy())])
+    } else {
+        builder
+    };
+
+    let bindings = builder
         // Finish the builder and generate the bindings.
         .generate()
         // Unwrap the Result and panic on failure.
