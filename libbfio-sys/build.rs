@@ -10,7 +10,8 @@ use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use tar::Archive;
 
-static LIBBFIO_TAR_GZ_URL: &'static str = "https://github.com/libyal/libbfio/releases/download/20190112/libbfio-alpha-20190112.tar.gz";
+static LIBBFIO_TAR_GZ_URL: &'static str =
+    "https://github.com/libyal/libbfio/releases/download/20190112/libbfio-alpha-20190112.tar.gz";
 static LIBBFIO_EXPECTED_DIR_NAME: &'static str = "libbfio-20190112";
 
 fn download_libbfio() -> Result<PathBuf, Error> {
@@ -95,10 +96,10 @@ fn build_static() {
         target.join("lib").display()
     );
 
-    println!("cargo:rustc-link-lib=static=fsntfs");
+    println!("cargo:rustc-link-lib=static=bfio");
     println!(
         "cargo:rustc-link-search=native={}",
-        target.join("lib").display()
+        target.join("lib").canonicalize().unwrap().display()
     );
 }
 
@@ -110,7 +111,7 @@ fn link_dynamic() {
         );
         println!("cargo:rustc-link-search=native={}", location);
     }
-    println!("cargo:rustc-link-lib=dylib=fsntfs");
+    println!("cargo:rustc-link-lib=dylib=bfio");
 }
 
 fn main() {

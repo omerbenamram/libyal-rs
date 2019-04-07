@@ -98,7 +98,7 @@ fn build_static() {
     println!("cargo:rustc-link-lib=static=fsntfs");
     println!(
         "cargo:rustc-link-search=native={}",
-        target.join("lib").display()
+        target.join("lib").canonicalize().unwrap().display()
     );
 }
 
