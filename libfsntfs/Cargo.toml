@@ -1,0 +1,43 @@
+[package]
+name = "libfsntfs-rs"
+description = "Ergonomic rust bindings for libfsntfs (https://github.com/libyal/libfsntfs)"
+homepage = "https://github.com/omerbenamram/libfsntfs-sys"
+repository = "https://github.com/omerbenamram/libfsntfs-sys"
+license = "LGPL-3.0+"
+
+readme = "README.md"
+version = "0.1.3"
+authors = ["Omer Ben-Amram <omerbenamram@gmail.com>"]
+edition = "2018"
+
+
+[dependencies]
+libfsntfs-sys = {path = "../libfsntfs-sys"}
+libbfio-rs = {path = "../libbfio"}
+libyal-rs-common = {path = "../common"}
+chrono = "0.4.6"
+time = "0.1.42"
+log = "0.4.6"
+failure = "0.1.5"
+
+[dev-dependencies]
+env_logger = "0.6.1"
+lazy_static = "1.3.0"
+
+[build-dependencies]
+reqwest = "0.9.13"
+flate2 = "1.0.7"
+tar = "0.4.22"
+failure = "0.1.5"
+
+[features]
+
+default = []
+
+# Use when building static bindings
+# it's possible to define LIBFSNTFS_STATIC_LIBPATH to build against local checkout of the library.
+static_link = ["libfsntfs-sys/static_link", "libbfio-rs/static_link"]
+
+[[example]]
+name = "file_attributes"
+path = "examples/file_attributes.rs"
