@@ -1,8 +1,8 @@
+use crate::libbfio::*;
 use libyal_rs_common::ffi::AsTypeRef;
 use std::fs::File;
 use std::os::raw::c_int;
 use std::ptr;
-use crate::libbfio::*;
 
 #[repr(C)]
 pub struct __Handle(isize);
@@ -15,7 +15,7 @@ pub struct Handle<'a>(HandleRefMut, &'a File);
 
 impl<'a> AsTypeRef for Handle<'a> {
     type Ref = HandleRef;
-    type RefMut = FileEntryRefMut;
+    type RefMut = HandleRefMut;
 
     #[inline]
     fn as_type_ref(&self) -> Self::Ref {
@@ -33,11 +33,11 @@ impl<'a> AsTypeRef for Handle<'a> {
     }
 }
 
-impl<'a> Handle<'a> {
-    pub fn wrap_ptr(volume: &'a Volume, ptr: FileEntryRefMut) -> Self {
-        Handle(ptr, volume)
-    }
-}
+//impl<'a> Handle<'a> {
+//    pub fn wrap_ptr(volume: &'a Volume, ptr: FileEntryRefMut) -> Self {
+//        Handle(ptr, volume)
+//    }
+//}
 
 impl<'a> Drop for Handle<'a> {
     fn drop(&mut self) {
@@ -46,63 +46,19 @@ impl<'a> Drop for Handle<'a> {
 
         let mut error = ptr::null_mut();
 
-        trace!("Calling `{}`", function!());
+        trace!("Calling `{}`", module_path!());
 
         unsafe {
             libbfio_handle_free(&mut self.as_type_ref_mut() as *mut _, &mut error);
         }
 
-        debug_assert!(error.is_null(), "`{}` failed!", function!());
+        debug_assert!(error.is_null(), "`{}` failed!", module_path!());
     }
 }
 
-type FreeFnPtr =
-    unsafe extern "C" fn(_: *mut *mut intptr_t, _: *mut *mut libcerror_error_t) -> libc::c_int;
-
-type CloneHandleFnPtr = unsafe extern "C" fn(
-    _: *mut *mut intptr_t,
-    _: *mut intptr_t,
-    _: *mut *mut libcerror_error_t,
-) -> libc::c_int;
-
-type OpenHandleFnPtr = CloneHandleFnPtr;
-
-type CloseHandleFnPtr =
-    unsafe extern "C" fn(_: *mut intptr_t, _: *mut *mut libcerror_error_t) -> libc::c_int;
-
-type ReadHandleFnPtr = unsafe extern "C" fn(
-    file_handle: *mut intptr_t,
-    buffer: *mut uint8_t,
-    n_bytes: size_t,
-    err: *mut *mut libcerror_error_t,
-) -> ssize_t;
-
-type WriteHandleFnPtr = unsafe extern "C" fn(
-    _: *mut intptr_t,
-    _: *const uint8_t,
-    _: size_t,
-    _: *mut *mut libcerror_error_t,
-) -> ssize_t;
-
-type SeekHandleFnPtr = unsafe extern "C" fn(
-    _: *mut intptr_t,
-    _: off64_t,
-    _: libc::c_int,
-    _: *mut *mut libcerror_error_t,
-) -> off64_t;
-
-type SelfFnPtr =
-    unsafe extern "C" fn(_: *mut intptr_t, _: *mut *mut libcerror_error_t) -> libc::c_int;
-
-type GetSizeFnPtr = unsafe extern "C" fn(
-    _: *mut intptr_t,
-    _: *mut size64_t,
-    _: *mut *mut libcerror_error_t,
-) -> libc::c_int;
-
 extern "C" {
     pub fn libbfio_handle_initialize(
-        handle: *mut FileEntryRefMutt,
+        handle: *mut HandleRefMut,
         io_handle: *mut isize,
         free_io_handle: Option<
             unsafe extern "C" fn(
@@ -169,11 +125,11 @@ extern "C" {
     ) -> c_int;
 
     pub fn libbfio_handle_free(
-        handle: *mut FileEntryRefMutt,
+        handle: *mut HandleRefMut,
         error: *mut *mut libbfio_error_t,
     ) -> c_int;
     pub fn libbfio_handle_clone(
-        destination_handle: *mut FileEntryRefMutt,
+        destination_handle: *mut HandleRefMut,
         source_handle: *mut libbfio_handle_t,
         error: *mut *mut libbfio_error_t,
     ) -> c_int;
