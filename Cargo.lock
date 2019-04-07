@@ -551,6 +551,7 @@ dependencies = [
  "flate2 1.0.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libfsntfs-sys 0.1.3",
+ "libyal-rs-common 0.1.3",
  "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "reqwest 0.9.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "tar 0.4.22 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -578,7 +579,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "libyal-common"
+name = "libyal-rs-common"
 version = "0.1.3"
 dependencies = [
  "chrono 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",

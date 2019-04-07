@@ -121,6 +121,13 @@ fn main() {
         // The input header we would like to generate
         // bindings for.
         .header("wrapper.h")
+        .clang_args(&[
+            "-Ilibbfio",
+            "-Ilibbfio/common",
+            "-Ilibbfio/include",
+            "-Ilibbfio/common",
+            "-Ilibbfio/libcerror",
+        ])
         // Finish the builder and generate the bindings.
         .generate()
         // Unwrap the Result and panic on failure.

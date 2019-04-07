@@ -121,7 +121,7 @@ fn main() {
         // The input header we would like to generate
         // bindings for.
         .header("wrapper.h")
-        .clang_args([
+        .clang_args(&[
             "-Ilibfsntfs",
             "-Ilibfsntfs/common",
             "-Ilibfsntfs/include",

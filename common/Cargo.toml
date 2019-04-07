@@ -1,5 +1,5 @@
 [package]
-name = "libyal-common"
+name = "libyal-rs-common"
 description = "Internal utilities"
 license = "LGPL-3.0+"
 
