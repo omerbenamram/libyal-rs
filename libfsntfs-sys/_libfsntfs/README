@@ -1,0 +1,12 @@
+libfsntfs is a library to access the Windows New Technology File System (NTFS) format.
+
+Project information:
+
+* Status: experimental
+* Licence: LGPLv3+
+
+For more information see:
+
+* Project documentation: https://github.com/libyal/libfsntfs/wiki/Home
+* How to build from source: https://github.com/libyal/libfsntfs/wiki/Building
+

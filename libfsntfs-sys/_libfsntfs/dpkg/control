@@ -1,0 +1,81 @@
+Source: libfsntfs
+Priority: extra
+Maintainer: Joachim Metz <joachim.metz@gmail.com>
+Build-Depends: debhelper (>= 9), dh-autoreconf, pkg-config, python-dev, python3-dev
+Standards-Version: 3.9.5
+Section: libs
+Homepage: https://github.com/libyal/libfsntfs
+
+Package: libfsntfs
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Conflicts: libfsntfs1
+Replaces: libfsntfs1
+Suggests: libfsntfs-dbg
+Description: Library to access the Windows New Technology File System (NTFS) format
+ libfsntfs is a library to access the Windows New Technology File System (NTFS) format.
+
+Package: libfsntfs-dbg
+Architecture: any
+Section: debug
+Depends: libfsntfs (= ${binary:Version}), ${misc:Depends}
+Description: Debugging symbols for libfsntfs
+ Debugging symbols for libfsntfs.
+
+Package: libfsntfs-dev
+Section: libdevel
+Architecture: any
+Depends: libfsntfs (= ${binary:Version}), ${misc:Depends}
+Description: Header files and libraries for developing applications for libfsntfs
+ Header files and libraries for developing applications for libfsntfs.
+
+Package: libfsntfs-tools
+Section: utils
+Architecture: any
+Depends: libfsntfs (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
+Conflicts: libfsntfs-utils
+Replaces: libfsntfs-utils
+Description: Several tools for reading Windows New Technology File System (NTFS) volumes
+ Several tools for reading Windows New Technology File System (NTFS) volumes.
+
+Package: libfsntfs-tools-dbg
+Section: debug
+Architecture: any
+Depends: libfsntfs-tools (= ${binary:Version}), ${misc:Depends}
+Description: Debugging symbols for libfsntfs-tools
+ Debugging symbols for libfsntfs-tools.
+
+Package: libfsntfs-python
+Section: python
+Architecture: any
+Depends: libfsntfs (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
+Conflicts: python-libfsntfs
+Replaces: python-libfsntfs
+Suggests: libfsntfs-python-dbg
+Description: Python 2 bindings for libfsntfs
+ Python 2 bindings for libfsntfs.
+
+Package: libfsntfs-python-dbg
+Section: debug
+Architecture: any
+Depends: libfsntfs-python (= ${binary:Version}), ${misc:Depends}
+Description: Debugging symbols for libfsntfs-python
+ Debugging symbols for libfsntfs-python.
+
+Package: libfsntfs-python3
+Section: python
+Architecture: any
+Depends: libfsntfs (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
+Conflicts: python3-libfsntfs
+Replaces: python3-libfsntfs
+Suggests: libfsntfs-python3-dbg
+Description: Python 3 bindings for libfsntfs
+ Python 3 bindings for libfsntfs.
+
+Package: libfsntfs-python3-dbg
+Section: debug
+Architecture: any
+Depends: libfsntfs-python3 (= ${binary:Version}), ${misc:Depends}
+Description: Debugging symbols for libfsntfs-python3
+ Debugging symbols for libfsntfs-python3.
+

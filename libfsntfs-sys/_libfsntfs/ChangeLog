@@ -1,0 +1,408 @@
+TODO
+* libfsntfs_volume_get_root_directory return 0 if MFT entry 5 does not exists
+
+* create directory type and wrap directory_entries_tree
+
+* Check if mft_entry should be cloned before passing to
+  libfsntfs_file_entry_initialize in case it is cached out
+  otherwise remove it from file_entry
+
+* tests: pass mft_metadata_file different input files
+* look into handling directories with high number of entries
+* libfsntfs/pyfsntfs attribute
+  - expose raw attribute data?
+* USN change journal
+  - add support for values in $Max
+* resident data
+  - handle valid data size
+* compressed data
+  - handle decompression errors e.g.
+    compression tuple offset value out of bounds.
+  - have means to map sparse ranges outside compressed blocks
+  - handle valid data size
+* make get by path/name functions case insensitive
+  - determine if NTFS really is case insensitive and make appropriate changes
+  - maybe have a flag or different functions to control case in compare
+* create fsntfsexport tool to export file entry data
+* handle pre 3.1 attribute names?
+* check file entry life times
+* set file entry name, if get by index and number of filenames is 1
+
+* volume cache directory entries trees ?
+* cached indexes?
+* handle cached out MFT entries
+  - copy directory entries in file entry
+  - copy directory index in file entry
+* data runs block
+  - add a check to see if data run sizes add up
+  - handle compressed blocks
+* volume
+  - complete libfsntfs_volume_has_bitlocker_drvie_encryption
+  - complete libfsntfs_volume_has_volume_shadow_snapshots
+* file entry
+  - add API get file name by attribute index functions?
+  - add API get parent file_reference name by attribute index functions?
+  - add API function for owner
+  - add API function for security identifier
+  - only retrieve file name from the directory entry?
+    or make clear in function documentation that first
+    non-short filename is the fallback?
+  - add support to retrieve name of the root entry if directory entry is missing
+* pyfsntfs
+  - add attribute type enum
+* pyfsntfs file entry
+  - expose more MFT entry values through API and pyfsntfs
+  - add is empty function
+  - add has_reparse_point function
+  - add has_symbolic_link function
+  - add is_corrupt function?
+  - how to handle file-like object functions for non-data file entry
+* pyfsntfs file entry/data stream
+  - add extents iterator?
+* libfsntfs/pyfsntfs file entry
+  - expose default data stream
+  - add support for short file name
+  - fallback to short file name if no long
+* libfsntfs_mft_entry_read_element_data set MFT only flag using element flags
+* libfsntfs_attribute_read_from_mft handle attribute size out of bounds
+* mft metadata file parsing mark file entry as in complete if data is stored
+  outside the $MFT
+* change MFT entry flags value checks to named definitions
+* attribute data parsing
+  - add SSIZE_MAX check for attribute->data_size before (size_t) cast
+* move directory entry btree into index ?
+* merge i30_index and alternate_index_array
+
+* cached approach of reading attributes ?
+
+* add support for other values of sectors_per_cluster_block, seen 8, 128
+* add support for other values of index_entry_size, seen 1, 244
+* complete libcdata integration
+* fix issue on win2k image
+  - stack overflow infinite loop
+  - determine MFT entry index based on offset
+    do not rely on value in structure
+
+* MFT entry create get data segment function for internal usage
+
+* how to handle named index roots e.g. $ObjId:$O, $Quota:$O
+* fix issue with bounded MFT entry cache
+* support MFT entry 0 consisting of multiple $DATA attributes
+  - add segment support to ntfs attribute data reference
+
+* file_entry: clone directory entry ?
+* what about ADS support ?
+  - todo read from ads
+* change libfsntfs_attribute_reference_append_attribute into insert and sort
+  attribute ranges
+
+* add function to retrieve MFT entry by index
+* check if check_signature function uses the right offset
+* refactor: libfsnt_array_append_entry in index ?
+
+* move get mft entry to file entry initialize ?
+  - clone mft entry in file entry initialize (for now the mft entry cache
+  contains a slot for every entry)
+
+* move volume header from io handle to separate object ?
+
+* $MFT scan
+  - mark ignored attribute list
+  - mark ignored data stream
+  - mark ignored index
+  - handle corrupt MFT entries (e.g. missing FILE signature) (+/-)
+  - allow to read data runs but do not allow to read data
+* $UsnJrnl:$J parsing
+  - move UsnJrnl parsing into library ?
+  - add support for $UsnJrnl:$J file parsing
+
+* API
+  - expose logged utility stream attribute
+
+Format:
+* index
+  - group equivalent index data values
+* boot block
+  - remove value restriction add sanity check
+* add support for attributes:
+  - logged utillity stream (LOGGED_UTILITY_STREAM) (partial)
+* pre NTFS 3.0 attribute types
+  - volume version
+* filenames
+  - ignoring short filenames for now?
+* ntfs3g indicates volume is hibernated, could this be stored in the volume flags?
+* Windows 10 different compression?
+
+Tools:
+* fsntfsinfo
+  - print ADS
+  - move UsnJrnl to separate tool?
+  - fix remnant data in buffer and remove work around
+  - sanitize control characters in filenames
+  - add detection of BDE and VSS
+  - add support for $LogFile
+  - print $DATA attribute size
+
+Error tolerance:
+* Support partial images/file systems
+
+Tests:
+* file with resident data
+* file with non-resident data
+* file with sparse data
+* file with compressed data
+* file with valid data size < data size
+* file with ADS
+* directory with ADS
+
+Performance:
+* compact attribute union data/file reference (use type to distinguish between them)
+
+Debug:
+* print volume information flags description
+
+Deployment
+* write man pages
+
+20141011
+* see `git log' for more recent change log
+* updated dependencies
+* changes for project site move
+
+20141004
+* removed README.macosx
+
+20140810
+* worked on exposing the attributes
+
+20140809
+* worked on data streams support
+* worked on exposing the attributes
+
+20140808
+* worked on data streams support
+
+20140803
+* bug fix in Python bindings
+
+20140628
+* Worked on format support
+
+20140530
+* Worked on Python bindings
+
+20140529
+* updated dependencies
+* Worked on Python bindings
+
+20140417
+* small changes
+
+20140318
+* worked on non-resident attribute list support
+
+20140207
+* worked on libfdata refactor
+
+20140206
+* worked on libfdata refactor
+
+20140205
+* worked on libfdata refactor
+
+20140204
+* worked on libfdata refactor
+
+20140203
+* worked on libfdata refactor
+
+20140119
+* worked on libfdata refactor
+
+20140118
+* 2014 update
+* updated dependencies
+* worked on libfdata refactor
+
+20131109
+* updated dependencies
+
+20130915
+* code clean up
+
+20130914
+* updated dependencies
+* added libcthreads build support
+
+20130224
+* updated dependencies
+* 2013 update
+
+20120929
+* updated dependencies
+
+20120821
+* improve NTFS version 3.0 support
+
+20120820
+* applied update
+* improved reading MFT attribute lists and data MFT entries
+
+20120526
+* worked on MFT read and seek data functions
+
+20120520
+* 2012 update
+* updated dependencies
+* added libfusn
+* fsntfsinfo:
+  - added info handle
+
+20111125
+* code clean up
+* added support for empty volume name
+
+20111124
+* removed libvshadow
+* updated configure.ac and m4 scripts
+* added include/codepage.h
+* updated common, array type
+* updated libcstring, libsystem, libuna, libfdata, libfdatetime, libfguid,
+  libfwnt
+* added libfcache
+* code clean up
+
+20110510
+* update libvshadow
+
+20110509
+* dist fixes
+
+20110508
+* updated configure.ac
+* updated libcstring, libsystem, libuna, libbfio, libfdata, libfguid
+
+20110309
+* small changes
+
+20110308
+* small changes
+
+20110306
+* worked on support for MFT consisting of multiple data runs
+
+20110305
+* updated configure, common, array type, libcstring, liberror, libnotify,
+  libsystem, libuna, libbfio, libfdata, libfdatetime, libfguid, libfwnt
+* 2011 update
+
+20101216
+* updated Makefile
+
+20101214
+* updated configure/Makefile
+
+20101209
+* added missing MFT entry flags debug output
+* code clean up
+* added initial gettext support
+* updated common, libfdatetime
+
+20101203
+* updated common, array type, liberror, libnotify, libsystem, libuna, libbfio,
+  libfdata
+
+20101129
+* worked on txf data
+
+20101128
+* worked on txf data
+
+20101127
+* updated libfdatetime
+* moved abort to IO handle
+* worked on txf data
+
+20101126
+* worked on support for multiple index allocation attributes
+
+20101125
+* worked on support for multiple index allocation attributes
+* updated libuna, libbfio, libfdata
+
+20101124
+* updated configure, libcstring, liberror, libbfio
+* worked on support for an attribute list
+
+20101113
+* textual changes
+
+20101112
+* renamed library to libfsntfs
+
+20101110
+* worked on winsxs support
+
+20101109
+* worked on logged utility stream
+* updated include/error.h
+* updated libfdata, liberror, libbfio, libnotify, libsystem
+* added support for directory index that only consists of index root attribute
+* fixed bug in fsntinfo
+* added support for directory index that has root and empty allocation index
+  attributes
+
+20100912
+* worked on reading attribute list
+* updated libbfio
+
+20100911
+* improved handling data runs
+
+20100910
+* worked on reading directory entries
+
+20100909
+* worked on reading directory entries
+
+20100908
+* worked on file entry functions
+* worked on reading directory entries
+* added debug print of file name attribute namespace description
+
+20100907
+* worked on reading directory entries
+
+20100906
+* worked on reading indexes
+
+20100905
+* worked on reading indexes
+* worked on data runs
+
+20100904
+* worked on attributes
+* worked on reading indexes
+* worked on fixup values
+
+20100903
+* worked on mft attribute
+* updated libbfio, libfdata
+* worked on file entry API functions
+* added libfguid for $OBJECT_ID attribute
+* worked on attributes
+
+20100828
+* worked on reading a MFT entry and attributes
+
+20100827
+* worked on reading a MFT entry and attributes
+* added debug print of file attribute flag description
+* added debug print of mft attribute type description
+
+20100826
+* worked on reading a MFT entry and attributes
+
+20100825
+* initial version
+

@@ -1,4 +1,9 @@
 [submodule "libfsntfs"]
-	path = libfsntfs
+	path = libfsntfs-sys/_libfsntfs
+	url = https://github.com/libyal/libfsntfs.git
+	branch = master
+
+[submodule "libbfio"]
+	path = libbfio-sys/_libbfio
 	url = https://github.com/libyal/libfsntfs.git
 	branch = master

@@ -1,0 +1,10 @@
+libfsntfs.lo: libfsntfs.c ../common/common.h ../common/config.h \
+  ../common/config_winapi.h libfsntfs_unused.h
+
+../common/common.h:
+
+../common/config.h:
+
+../common/config_winapi.h:
+
+libfsntfs_unused.h:
