@@ -11,3 +11,11 @@ chrono = "0.4.6"
 time = "0.1.42"
 log = "0.4.6"
 failure = "0.1.5"
+
+[features]
+
+default = []
+
+# Use when building static bindings
+# it's possible to define LIBBFIO_STATIC_LIBPATH to build against local checkout of the library.
+static_link = ["libbfio-sys/static_link"]

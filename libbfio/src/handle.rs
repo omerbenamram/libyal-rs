@@ -1,9 +1,12 @@
 use crate::error::Error;
-use crate::libbfio::*;
+use crate::ffi_error::LibbfioErrorRefMut;
+use crate::io_handle::IoHandle;
+use crate::io_handle::*;
 use libyal_rs_common::ffi::AsTypeRef;
 use std::fs::File;
-use std::io::{Read, Seek};
+use std::io::{Read, Seek, Write};
 use std::os::raw::c_int;
+use std::path::Path;
 use std::ptr;
 
 #[repr(C)]
@@ -13,9 +16,9 @@ pub type HandleRefMut = *mut __Handle;
 pub type HandleRef = *const __Handle;
 
 #[repr(C)]
-pub struct Handle<'a>(HandleRefMut, &'a File);
+pub struct Handle(HandleRefMut);
 
-impl<'a> AsTypeRef for Handle<'a> {
+impl AsTypeRef for Handle {
     type Ref = HandleRef;
     type RefMut = HandleRefMut;
 
@@ -41,7 +44,7 @@ impl<'a> AsTypeRef for Handle<'a> {
 //    }
 //}
 
-impl<'a> Drop for Handle<'a> {
+impl Drop for Handle {
     fn drop(&mut self) {
         use libyal_rs_common::ffi::AsTypeRef;
         use log::trace;
@@ -59,14 +62,31 @@ impl<'a> Drop for Handle<'a> {
 }
 
 impl Handle {
-    pub fn from<R: Read + Seek>(inner: R) -> Result<Handle, Error> {
+    pub fn open_file(path: impl AsRef<Path>) -> Result<Handle, Error> {
         let mut handle = ptr::null_mut();
+        let mut error = ptr::null_mut();
 
-        let c_string = CString::new(filename.as_ref()).map_err(Error::StringContainsNul)?;
+        let io_handle = IoHandle::open_file(path).expect("open file");
+        let boxed_handle = Box::new(io_handle);
 
-        let mut init_error = ptr::null_mut();
-
-        let retcode = unsafe { libbfio_handle_initialize(&mut handle as _, &mut init_error as _) };
+        let retcode = unsafe {
+            libbfio_handle_initialize(
+                &mut handle as _,
+                Box::into_raw(boxed_handle),
+                Some(io_handle_free),
+                Some(io_handle_clone),
+                Some(io_handle_open),
+                Some(io_handle_close),
+                Some(io_handle_read),
+                Some(io_handle_write),
+                Some(io_handle_seek),
+                Some(io_handle_exists),
+                Some(io_handle_is_open),
+                Some(io_handle_get_size),
+                0,
+                &mut error,
+            )
+        };
 
         if retcode != 1 {
             return Err(Error::try_from(init_error)?);
@@ -93,38 +113,38 @@ impl Handle {
 }
 
 extern "C" {
-    pub fn libbfio_handle_initialize(
+    pub fn libbfio_handle_initialize<I: Read + Seek + Clone + Write>(
         handle: *mut HandleRefMut,
-        io_handle: *mut isize,
+        io_handle: IoHandle<I>,
         free_io_handle: Option<
             unsafe extern "C" fn(
                 io_handle: *mut HandleRefMut,
-                error: *mut *mut libbfio_error_t,
+                error: *mut LibbfioErrorRefMut,
             ) -> c_int,
         >,
         clone_io_handle: Option<
             unsafe extern "C" fn(
                 destination_io_handle: *mut HandleRefMut,
                 source_io_handle: *mut isize,
-                error: *mut *mut libbfio_error_t,
+                error: *mut LibbfioErrorRefMut,
             ) -> c_int,
         >,
         open: Option<
             unsafe extern "C" fn(
                 io_handle: *mut isize,
                 access_flags: c_int,
-                error: *mut *mut libbfio_error_t,
+                error: *mut LibbfioErrorRefMut,
             ) -> c_int,
         >,
         close: Option<
-            unsafe extern "C" fn(io_handle: *mut isize, error: *mut *mut libbfio_error_t) -> c_int,
+            unsafe extern "C" fn(io_handle: *mut isize, error: *mut LibbfioErrorRefMut) -> c_int,
         >,
         read: Option<
             unsafe extern "C" fn(
                 io_handle: *mut isize,
                 buffer: *mut u8,
                 size: usize,
-                error: *mut *mut libbfio_error_t,
+                error: *mut LibbfioErrorRefMut,
             ) -> isize,
         >,
         write: Option<
@@ -132,128 +152,116 @@ extern "C" {
                 io_handle: *mut isize,
                 buffer: *const u8,
                 size: usize,
-                error: *mut *mut libbfio_error_t,
+                error: *mut LibbfioErrorRefMut,
             ) -> isize,
         >,
         seek_offset: Option<
             unsafe extern "C" fn(
                 io_handle: *mut isize,
-                offset: off64_t,
+                offset: u64,
                 whence: c_int,
-                error: *mut *mut libbfio_error_t,
-            ) -> off64_t,
+                error: *mut LibbfioErrorRefMut,
+            ) -> u64,
         >,
         exists: Option<
-            unsafe extern "C" fn(io_handle: *mut isize, error: *mut *mut libbfio_error_t) -> c_int,
+            unsafe extern "C" fn(io_handle: *mut isize, error: *mut LibbfioErrorRefMut) -> c_int,
         >,
         is_open: Option<
-            unsafe extern "C" fn(io_handle: *mut isize, error: *mut *mut libbfio_error_t) -> c_int,
+            unsafe extern "C" fn(io_handle: *mut isize, error: *mut LibbfioErrorRefMut) -> c_int,
         >,
         get_size: Option<
             unsafe extern "C" fn(
                 io_handle: *mut isize,
-                size: *mut size64_t,
-                error: *mut *mut libbfio_error_t,
+                size: *mut u64,
+                error: *mut LibbfioErrorRefMut,
             ) -> c_int,
         >,
         flags: u8,
-        error: *mut *mut libbfio_error_t,
+        error: *mut LibbfioErrorRefMut,
     ) -> c_int;
 
-    pub fn libbfio_handle_free(
-        handle: *mut HandleRefMut,
-        error: *mut *mut libbfio_error_t,
-    ) -> c_int;
+    pub fn libbfio_handle_free(handle: *mut HandleRefMut, error: *mut LibbfioErrorRefMut) -> c_int;
     pub fn libbfio_handle_clone(
         destination_handle: *mut HandleRefMut,
-        source_handle: *mut libbfio_handle_t,
-        error: *mut *mut libbfio_error_t,
+        source_handle: HandleRef,
+        error: *mut LibbfioErrorRefMut,
     ) -> c_int;
     pub fn libbfio_handle_open(
-        handle: *mut libbfio_handle_t,
+        handle: HandleRef,
         access_flags: c_int,
-        error: *mut *mut libbfio_error_t,
+        error: *mut LibbfioErrorRefMut,
     ) -> c_int;
     pub fn libbfio_handle_reopen(
-        handle: *mut libbfio_handle_t,
+        handle: HandleRef,
         access_flags: c_int,
-        error: *mut *mut libbfio_error_t,
+        error: *mut LibbfioErrorRefMut,
     ) -> c_int;
-    pub fn libbfio_handle_close(
-        handle: *mut libbfio_handle_t,
-        error: *mut *mut libbfio_error_t,
-    ) -> c_int;
+    pub fn libbfio_handle_close(handle: HandleRef, error: *mut LibbfioErrorRefMut) -> c_int;
     pub fn libbfio_handle_read_buffer(
-        handle: *mut libbfio_handle_t,
+        handle: HandleRef,
         buffer: *mut u8,
         size: usize,
-        error: *mut *mut libbfio_error_t,
+        error: *mut LibbfioErrorRefMut,
     ) -> isize;
     pub fn libbfio_handle_write_buffer(
-        handle: *mut libbfio_handle_t,
+        handle: HandleRef,
         buffer: *const u8,
         size: usize,
-        error: *mut *mut libbfio_error_t,
+        error: *mut LibbfioErrorRefMut,
     ) -> isize;
     pub fn libbfio_handle_seek_offset(
-        handle: *mut libbfio_handle_t,
-        offset: off64_t,
+        handle: HandleRef,
+        offset: u64,
         whence: c_int,
-        error: *mut *mut libbfio_error_t,
-    ) -> off64_t;
-    pub fn libbfio_handle_exists(
-        handle: *mut libbfio_handle_t,
-        error: *mut *mut libbfio_error_t,
-    ) -> c_int;
-    pub fn libbfio_handle_is_open(
-        handle: *mut libbfio_handle_t,
-        error: *mut *mut libbfio_error_t,
-    ) -> c_int;
+        error: *mut LibbfioErrorRefMut,
+    ) -> u64;
+    pub fn libbfio_handle_exists(handle: HandleRef, error: *mut LibbfioErrorRefMut) -> c_int;
+    pub fn libbfio_handle_is_open(handle: HandleRef, error: *mut LibbfioErrorRefMut) -> c_int;
     pub fn libbfio_handle_get_io_handle(
-        handle: *mut libbfio_handle_t,
+        handle: HandleRef,
         io_handle: *mut HandleRefMut,
-        error: *mut *mut libbfio_error_t,
+        error: *mut LibbfioErrorRefMut,
     ) -> c_int;
     pub fn libbfio_handle_get_access_flags(
-        handle: *mut libbfio_handle_t,
+        handle: HandleRef,
         access_flags: *mut c_int,
-        error: *mut *mut libbfio_error_t,
+        error: *mut LibbfioErrorRefMut,
     ) -> c_int;
     pub fn libbfio_handle_set_access_flags(
-        handle: *mut libbfio_handle_t,
+        handle: HandleRef,
         access_flags: c_int,
-        error: *mut *mut libbfio_error_t,
+        error: *mut LibbfioErrorRefMut,
     ) -> c_int;
     pub fn libbfio_handle_get_offset(
-        handle: *mut libbfio_handle_t,
-        offset: *mut off64_t,
-        error: *mut *mut libbfio_error_t,
+        handle: HandleRef,
+        offset: *mut u64,
+        error: *mut LibbfioErrorRefMut,
     ) -> c_int;
     pub fn libbfio_handle_get_size(
-        handle: *mut libbfio_handle_t,
-        size: *mut size64_t,
-        error: *mut *mut libbfio_error_t,
+        handle: HandleRef,
+        size: *mut u64,
+        error: *mut LibbfioErrorRefMut,
     ) -> c_int;
     pub fn libbfio_handle_set_open_on_demand(
-        handle: *mut libbfio_handle_t,
+        handle: HandleRef,
         open_on_demand: u8,
-        error: *mut *mut libbfio_error_t,
+        error: *mut LibbfioErrorRefMut,
     ) -> c_int;
     pub fn libbfio_handle_set_track_offsets_read(
-        handle: *mut libbfio_handle_t,
+        handle: HandleRef,
         track_offsets_read: u8,
-        error: *mut *mut libbfio_error_t,
+        error: *mut LibbfioErrorRefMut,
     ) -> c_int;
     pub fn libbfio_handle_get_number_of_offsets_read(
-        handle: *mut libbfio_handle_t,
+        handle: HandleRef,
         number_of_read_offsets: *mut c_int,
-        error: *mut *mut libbfio_error_t,
+        error: *mut LibbfioErrorRefMut,
     ) -> c_int;
     pub fn libbfio_handle_get_offset_read(
-        handle: *mut libbfio_handle_t,
+        handle: HandleRef,
         index: c_int,
-        offset: *mut off64_t,
-        size: *mut size64_t,
-        error: *mut *mut libbfio_error_t,
+        offset: *mut u64,
+        size: *mut u64,
+        error: *mut LibbfioErrorRefMut,
     ) -> c_int;
 }
