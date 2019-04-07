@@ -1,6 +1,6 @@
 use crate::error::Error;
 use crate::ffi_error::LibbfioErrorRefMut;
-use crate::libbfio::{size64_t, SEEK_CUR, SEEK_END, SEEK_SET};
+use libbfio_sys::{size64_t, SEEK_CUR, SEEK_END, SEEK_SET};
 
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom, Write};

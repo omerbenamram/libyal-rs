@@ -54,7 +54,7 @@ fn download_libbfio() -> Result<PathBuf, Error> {
     Ok(expected_path)
 }
 
-fn build_static() {
+fn build_static() -> Option<PathBuf> {
     let libbfio = if let Ok(local_install) = env::var("LIBBFIO_STATIC_LIBPATH") {
         PathBuf::from(local_install)
     } else {
@@ -99,22 +99,39 @@ fn build_static() {
     println!("cargo:rustc-link-lib=static=bfio");
     println!(
         "cargo:rustc-link-search=native={}",
-        target.join("lib").canonicalize().unwrap().display()
+        target.join("lib").canonicalize().unwrap().to_string_lossy()
     );
+
+    Some(target)
 }
 
-fn link_dynamic() {
+fn link_dynamic() -> Option<PathBuf> {
+    println!("cargo:rustc-link-lib=dylib=bfio");
+
     if let Ok(location) = env::var("LIBBFIO_DYNAMIC_LIBPATH") {
         assert!(
             PathBuf::from(&location).exists(),
             "path passed in LIBBFIO_DYNAMIC_LIBPATH does not exist!"
         );
         println!("cargo:rustc-link-search=native={}", location);
+
+        return Some(location.into());
     }
-    println!("cargo:rustc-link-lib=dylib=bfio");
+
+    None
 }
 
 fn main() {
+    let target = if cfg!(feature = "static_link") {
+        println!("Building static bindings");
+        build_static()
+    } else {
+        println!("Building dynamic bindings");
+        link_dynamic()
+    };
+
+    let target = target.unwrap();
+
     // The bindgen::Builder is the main entry point
     // to bindgen, and lets you build up options for
     // the resulting bindings.
@@ -123,11 +140,7 @@ fn main() {
         // bindings for.
         .header("wrapper.h")
         .clang_args(&[
-            "-Ilibbfio",
-            "-Ilibbfio/common",
-            "-Ilibbfio/include",
-            "-Ilibbfio/common",
-            "-Ilibbfio/libcerror",
+            format!("-I{}/include", target.to_string_lossy()),
         ])
         // Finish the builder and generate the bindings.
         .generate()
@@ -140,12 +153,4 @@ fn main() {
     bindings
         .write_to_file(out_path.join("bindings.rs"))
         .expect("Couldn't write bindings!");
-
-    if cfg!(feature = "static_link") {
-        println!("Building static bindings");
-        return build_static();
-    } else {
-        println!("Building dynamic bindings");
-        return link_dynamic();
-    }
 }

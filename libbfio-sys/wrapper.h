@@ -1,1 +1,1 @@
-#include "libbfio/include/libbfio.h"
+#include "libbfio.h"

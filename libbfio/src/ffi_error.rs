@@ -1,5 +1,5 @@
 use crate::error::Error;
-use crate::libbfio::FILE;
+use libbfio_sys::FILE;
 use libyal_rs_common::ffi::AsTypeRef;
 use log::trace;
 use std::convert::TryFrom;
