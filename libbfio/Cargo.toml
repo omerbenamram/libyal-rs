@@ -12,6 +12,9 @@ time = "0.1.42"
 log = "0.4.6"
 failure = "0.1.5"
 
+[dev-dependencies]
+tempdir = "0.3.7"
+
 [features]
 
 default = []

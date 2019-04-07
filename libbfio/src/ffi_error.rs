@@ -7,11 +7,13 @@ use std::ffi::{c_void, CStr};
 use std::fmt::{self, Display, Formatter};
 use std::mem;
 
+#[repr(C)]
 pub struct __LibbfioError(isize);
 
 pub type LibbfioErrorRefMut = *mut __LibbfioError;
 pub type LibbfioErrorRef = *const __LibbfioError;
 
+#[repr(C)]
 pub struct LibbfioError(LibbfioErrorRefMut);
 
 impl AsTypeRef for LibbfioError {

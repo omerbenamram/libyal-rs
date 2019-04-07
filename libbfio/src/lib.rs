@@ -1,3 +1,6 @@
+#![feature(seek_convenience)]
+#![feature(toowned_clone_into)]
+
 #[macro_use]
 extern crate libyal_rs_common;
 
