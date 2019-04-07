@@ -5,11 +5,11 @@ use std::ptr;
 #[repr(C)]
 pub struct __Handle(isize);
 
-pub type HandleRefMut = *mut __FileEntry;
-pub type HandleRef = *const __FileEntry;
+pub type HandleRefMut = *mut __Handle;
+pub type HandleRef = *const __Handle;
 
 #[repr(C)]
-pub struct Handle<'a>(FileEntryRefMut, &'a File);
+pub struct Handle<'a>(HandleRefMut, &'a File);
 
 impl<'a> crate::ffi::AsTypeRef for Handle<'a> {
     type Ref = HandleRef;
