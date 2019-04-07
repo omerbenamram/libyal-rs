@@ -6,3 +6,6 @@
 	path = libbfio-sys/libbfio
 	url = https://github.com/libyal/libbfio.git
 	branch = master
+[submodule "vstools"]
+	path = vstools
+	url = https://github.com/libyal/vstools.git
