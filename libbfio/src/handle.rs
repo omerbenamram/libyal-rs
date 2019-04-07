@@ -1,6 +1,8 @@
+use crate::error::Error;
 use crate::libbfio::*;
 use libyal_rs_common::ffi::AsTypeRef;
 use std::fs::File;
+use std::io::{Read, Seek};
 use std::os::raw::c_int;
 use std::ptr;
 
@@ -53,6 +55,40 @@ impl<'a> Drop for Handle<'a> {
         }
 
         debug_assert!(error.is_null(), "`{}` failed!", module_path!());
+    }
+}
+
+impl Handle {
+    pub fn from<R: Read + Seek>(inner: R) -> Result<Handle, Error> {
+        let mut handle = ptr::null_mut();
+
+        let c_string = CString::new(filename.as_ref()).map_err(Error::StringContainsNul)?;
+
+        let mut init_error = ptr::null_mut();
+
+        let retcode = unsafe { libbfio_handle_initialize(&mut handle as _, &mut init_error as _) };
+
+        if retcode != 1 {
+            return Err(Error::try_from(init_error)?);
+        }
+
+        let volume = Volume::wrap_ptr(handle);
+
+        let mut error = ptr::null_mut();
+
+        if unsafe {
+            libfsntfs_volume_open(
+                volume.as_type_ref(),
+                c_string.as_ptr(),
+                mode.as_flag() as c_int,
+                &mut error as _,
+            )
+        } != 1
+        {
+            Err(Error::try_from(error)?)
+        } else {
+            Ok(volume)
+        }
     }
 }
 
