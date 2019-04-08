@@ -104,7 +104,8 @@ fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
         .status()
         .expect("autogen failed");
 
-    std::fs::remove_dir_all(&lib_path.join("vs2015")).unwrap();
+    // The folder might not exists, but we don't care.
+    let _ = std::fs::remove_dir_all(&lib_path.join("vs2015"));
 
     let lib_name = lib_path.file_name().unwrap().to_string_lossy().into_owned();
 
