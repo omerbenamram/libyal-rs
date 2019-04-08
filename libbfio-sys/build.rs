@@ -4,18 +4,12 @@ use failure::{bail, Error};
 use std::env;
 use std::fs::File;
 use std::io;
-use std::io::{Read, Seek, SeekFrom, Write};
+use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
 #[cfg(not(target_os = "windows"))]
-fn build_static() -> Option<PathBuf> {
-    let libbfio = if let Ok(local_install) = env::var("LIBBFIO_STATIC_LIBPATH") {
-        PathBuf::from(local_install)
-    } else {
-        env::current_dir().unwrap().join("libbfio")
-    };
-
+fn build_lib(libbfio: PathBuf, shared: bool) -> PathBuf {
     let target = libbfio.join("dist");
 
     println!("building with prefix={}", target.display());
@@ -36,15 +30,20 @@ fn build_static() -> Option<PathBuf> {
         .status()
         .expect("autogen failed");
 
-    Command::new("sh")
+    let mut configure_cmd = Command::new("sh");
+
+    configure_cmd
         .arg("configure")
-        .arg("--enable-shared=no")
         .arg(format!("--prefix={}", target.display()))
         .current_dir(&libbfio)
         .stderr(Stdio::inherit())
-        .stdout(Stdio::inherit())
-        .status()
-        .expect("configure failed");
+        .stdout(Stdio::inherit());
+
+    if !shared {
+        configure_cmd.arg("--enable-shared=no");
+    }
+
+    configure_cmd.status().expect("configure failed");
 
     Command::new("make")
         .current_dir(&libbfio)
@@ -67,23 +66,16 @@ fn build_static() -> Option<PathBuf> {
         target.join("lib").display()
     );
 
-    println!("cargo:rustc-link-lib=static=bfio");
     println!(
         "cargo:rustc-link-search=native={}",
         target.join("lib").canonicalize().unwrap().to_string_lossy()
     );
 
-    Some(target)
+    target
 }
 
 #[cfg(target_os = "windows")]
-fn build_static() -> Option<PathBuf> {
-    let libbfio = if let Ok(local_install) = env::var("LIBBFIO_STATIC_LIBPATH") {
-        PathBuf::from(local_install)
-    } else {
-        env::current_dir().unwrap().join("libbfio")
-    };
-
+fn build_lib(libbfio: PathBuf, shared: bool) -> PathBuf {
     let python_exec =
         env::var("PYTHON_SYS_EXECUTABLE ").unwrap_or_else(|_| "python.exe".to_owned());
 
@@ -125,22 +117,30 @@ fn build_static() -> Option<PathBuf> {
     let mut msbuild =
         cc::windows_registry::find(&target, "msbuild").expect("Needs msbuild installed");
 
+    let msbuild_platform = if target.contains("x86_64") {
+        "x64"
+    } else {
+        "Win32"
+    };
+
     msbuild
         .arg("vs2015\\libbfio.sln")
         .arg("/property:PlatformToolset=v141")
+        .arg(format!("/p:Platform={}", msbuild_platform))
         .current_dir(&libbfio)
         .stderr(Stdio::inherit())
-        .stdout(Stdio::inherit())
-        .status()
-        .expect("Building the solution failed");
+        .stdout(Stdio::inherit());
 
-    let build_dir = libbfio.join("vs2015").join("Release");
+    if !shared {
+        msbuild.arg("/p:ConfigurationType=StaticLibrary");
+    }
 
-    let build_dir = if target.contains("x86_64") {
-        build_dir.join("x64")
-    } else {
-        build_dir.join("Win32")
-    };
+    msbuild.status().expect("Building the solution failed");
+
+    let build_dir = libbfio
+        .join("vs2015")
+        .join("Release")
+        .join(msbuild_platform);
 
     assert!(build_dir.exists(), "Expected {:?} to exist", build_dir);
 
@@ -157,13 +157,12 @@ fn build_static() -> Option<PathBuf> {
         utf16le_to_utf8(&file_path).unwrap();
     }
 
-    println!("cargo:rustc-link-lib=static=libbfio");
     println!(
         "cargo:rustc-link-search=native={}",
         build_dir.to_string_lossy()
     );
 
-    Some(libbfio)
+    libbfio
 }
 
 #[cfg(target_os = "windows")]
@@ -186,50 +185,60 @@ fn utf16le_to_utf8(file_path: &PathBuf) -> Result<(), Error> {
     Ok(())
 }
 
-fn link_dynamic() -> Option<PathBuf> {
+fn build_and_link_static() -> PathBuf {
+    let libbfio = if let Ok(local_install) = env::var("LIBBFIO_STATIC_LIBPATH") {
+        PathBuf::from(local_install)
+    } else {
+        env::current_dir().unwrap().join("libbfio")
+    };
+
+    if cfg!(target_os = "windows") {
+        println!("cargo:rustc-link-lib=static=libbfio");
+
+        // Also static-link deps.
+        println!("cargo:rustc-link-lib=static=libcerror");
+        println!("cargo:rustc-link-lib=static=libcdata");
+        println!("cargo:rustc-link-lib=static=libcthreads");
+    } else {
+        println!("cargo:rustc-link-lib=static=bfio");
+    }
+
+    build_lib(libbfio, false)
+}
+
+fn build_and_link_dynamic() -> PathBuf {
+    let libbfio = if let Ok(local_install) = env::var("LIBBFIO_DYNAMIC_LIBPATH") {
+        PathBuf::from(local_install)
+    } else {
+        env::current_dir().unwrap().join("libbfio")
+    };
+
     if cfg!(target_os = "windows") {
         println!("cargo:rustc-link-lib=dylib=libbfio");
     } else {
         println!("cargo:rustc-link-lib=dylib=bfio");
     }
 
-    if let Ok(location) = env::var("LIBBFIO_DYNAMIC_LIBPATH") {
-        assert!(
-            PathBuf::from(&location).exists(),
-            "path passed in LIBBFIO_DYNAMIC_LIBPATH does not exist!"
-        );
-        println!("cargo:rustc-link-search=native={}", location);
-
-        return Some(location.into());
-    }
-
-    None
+    build_lib(libbfio, true)
 }
 
 fn main() {
     let target = if cfg!(feature = "static_link") {
         println!("Building static bindings");
-        build_static()
+        build_and_link_static()
     } else {
         println!("Building dynamic bindings");
-        link_dynamic()
+        build_and_link_dynamic()
     };
 
     // The bindgen::Builder is the main entry point
     // to bindgen, and lets you build up options for
     // the resulting bindings.
-    let builder = bindgen::Builder::default()
+    let bindings = bindgen::Builder::default()
         // The input header we would like to generate
         // bindings for.
-        .header("wrapper.h");
-
-    let builder = if let Some(target) = target {
-        builder.clang_args(&[format!("-I{}/include", target.to_string_lossy())])
-    } else {
-        builder
-    };
-
-    let bindings = builder
+        .clang_args(&[format!("-I{}/include", target.to_string_lossy())])
+        .header("wrapper.h")
         // Finish the builder and generate the bindings.
         .generate()
         // Unwrap the Result and panic on failure.
