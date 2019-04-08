@@ -8,7 +8,7 @@ use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
-/// Build the lib.
+/// Build the lib on posix platforms (using configure and make).
 /// This function will also add the needed folder to the `link-search` path.
 /// Return the "include" folder for the library (to be used by bindgen).
 #[cfg(not(target_os = "windows"))]
@@ -77,6 +77,10 @@ fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
     target.join("include")
 }
 
+/// Build the lib on windows (using msbuild and libyal's vstools).
+/// Require python to be installed.
+/// This function will also add the needed folder to the `link-search` path.
+/// Return the "include" folder for the library (to be used by bindgen).
 #[cfg(target_os = "windows")]
 fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
     let python_exec =
@@ -156,7 +160,8 @@ fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
 
     let include_folder_path = lib_path.join("include");
 
-    // Override h files with bad encoding (anything created by autogen.ps1).
+    // h files created by autogen.ps1 are UTF16LE encoded, which llvm (and therefore bindgen) will not accept.
+    // So convert them back to UTF8.
     let lib_h_file = include_folder_path.join(format!("{}.h", lib_name));
     utf16le_to_utf8(&lib_h_file).unwrap();
 
