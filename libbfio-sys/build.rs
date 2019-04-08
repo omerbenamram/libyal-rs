@@ -8,15 +8,18 @@ use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
+/// Build the lib.
+/// This function will also add the needed folder to the `link-search` path.
+/// Return the "include" folder for the library (to be used by bindgen).
 #[cfg(not(target_os = "windows"))]
-fn build_lib(libbfio: PathBuf, shared: bool) -> PathBuf {
-    let target = libbfio.join("dist");
+fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
+    let target = lib_path.join("dist");
 
     println!("building with prefix={}", target.display());
 
     Command::new("sh")
         .arg("synclibs.sh")
-        .current_dir(&libbfio)
+        .current_dir(&lib_path)
         .stderr(Stdio::inherit())
         .stdout(Stdio::inherit())
         .status()
@@ -24,7 +27,7 @@ fn build_lib(libbfio: PathBuf, shared: bool) -> PathBuf {
 
     Command::new("sh")
         .arg("autogen.sh")
-        .current_dir(&libbfio)
+        .current_dir(&lib_path)
         .stderr(Stdio::inherit())
         .stdout(Stdio::inherit())
         .status()
@@ -35,7 +38,7 @@ fn build_lib(libbfio: PathBuf, shared: bool) -> PathBuf {
     configure_cmd
         .arg("configure")
         .arg(format!("--prefix={}", target.display()))
-        .current_dir(&libbfio)
+        .current_dir(&lib_path)
         .stderr(Stdio::inherit())
         .stdout(Stdio::inherit());
 
@@ -46,7 +49,7 @@ fn build_lib(libbfio: PathBuf, shared: bool) -> PathBuf {
     configure_cmd.status().expect("configure failed");
 
     Command::new("make")
-        .current_dir(&libbfio)
+        .current_dir(&lib_path)
         .stderr(Stdio::inherit())
         .stdout(Stdio::inherit())
         .status()
@@ -54,7 +57,7 @@ fn build_lib(libbfio: PathBuf, shared: bool) -> PathBuf {
 
     Command::new("make")
         .arg("install")
-        .current_dir(&libbfio)
+        .current_dir(&lib_path)
         .stderr(Stdio::inherit())
         .stdout(Stdio::inherit())
         .status()
@@ -71,18 +74,18 @@ fn build_lib(libbfio: PathBuf, shared: bool) -> PathBuf {
         target.join("lib").canonicalize().unwrap().to_string_lossy()
     );
 
-    target
+    target.join("include")
 }
 
 #[cfg(target_os = "windows")]
-fn build_lib(libbfio: PathBuf, shared: bool) -> PathBuf {
+fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
     let python_exec =
         env::var("PYTHON_SYS_EXECUTABLE ").unwrap_or_else(|_| "python.exe".to_owned());
 
     Command::new("powershell")
         .arg("-File")
         .arg("synclibs.ps1")
-        .current_dir(&libbfio)
+        .current_dir(&lib_path)
         .stderr(Stdio::inherit())
         .stdout(Stdio::inherit())
         .status()
@@ -91,21 +94,23 @@ fn build_lib(libbfio: PathBuf, shared: bool) -> PathBuf {
     Command::new("powershell")
         .arg("-File")
         .arg("autogen.ps1")
-        .current_dir(&libbfio)
+        .current_dir(&lib_path)
         .stderr(Stdio::inherit())
         .stdout(Stdio::inherit())
         .status()
         .expect("autogen failed");
 
-    std::fs::remove_dir_all(&libbfio.join("vs2015")).unwrap();
+    std::fs::remove_dir_all(&lib_path.join("vs2015")).unwrap();
+
+    let lib_name = lib_path.file_name().unwrap().to_string_lossy().into_owned();
 
     Command::new(&python_exec)
         .arg("..\\..\\vstools\\scripts\\msvscpp-convert.py")
         .arg("--extend-with-x64")
         .arg("--output-format")
         .arg("2015")
-        .arg("msvscpp\\libbfio.sln")
-        .current_dir(&libbfio)
+        .arg(format!("msvscpp\\{}.sln", lib_name))
+        .current_dir(&lib_path)
         .env("PYTHONPATH", "..\\..\\vstools")
         .stderr(Stdio::inherit())
         .stdout(Stdio::inherit())
@@ -124,10 +129,10 @@ fn build_lib(libbfio: PathBuf, shared: bool) -> PathBuf {
     };
 
     msbuild
-        .arg("vs2015\\libbfio.sln")
+        .arg(format!("vs2015\\{}.sln", lib_name))
         .arg("/property:PlatformToolset=v141")
         .arg(format!("/p:Platform={}", msbuild_platform))
-        .current_dir(&libbfio)
+        .current_dir(&lib_path)
         .stderr(Stdio::inherit())
         .stdout(Stdio::inherit());
 
@@ -137,32 +142,34 @@ fn build_lib(libbfio: PathBuf, shared: bool) -> PathBuf {
 
     msbuild.status().expect("Building the solution failed");
 
-    let build_dir = libbfio
+    let build_dir = lib_path
         .join("vs2015")
         .join("Release")
         .join(msbuild_platform);
 
     assert!(build_dir.exists(), "Expected {:?} to exist", build_dir);
 
-    // Override h files with bad encoding (anything created by autogen.ps1).
-    let lib_h_file = libbfio.join("include").join("libbfio.h");
-    utf16le_to_utf8(&lib_h_file).unwrap();
-
-    let types_h_file = libbfio.join("common").join("types.h");
-    utf16le_to_utf8(&types_h_file).unwrap();
-
-    for file in ["definitions.h", "features.h", "types.h"].iter() {
-        let file_path = libbfio.join("include").join("libbfio").join(file);
-
-        utf16le_to_utf8(&file_path).unwrap();
-    }
-
     println!(
         "cargo:rustc-link-search=native={}",
         build_dir.to_string_lossy()
     );
 
-    libbfio
+    let include_folder_path = lib_path.join("include");
+
+    // Override h files with bad encoding (anything created by autogen.ps1).
+    let lib_h_file = include_folder_path.join(format!("{}.h", lib_name));
+    utf16le_to_utf8(&lib_h_file).unwrap();
+
+    let types_h_file = lib_path.join("common").join("types.h");
+    utf16le_to_utf8(&types_h_file).unwrap();
+
+    for file in ["definitions.h", "features.h", "types.h"].iter() {
+        let file_path = include_folder_path.join(&lib_name).join(file);
+
+        utf16le_to_utf8(&file_path).unwrap();
+    }
+
+    include_folder_path
 }
 
 #[cfg(target_os = "windows")]
@@ -195,7 +202,7 @@ fn build_and_link_static() -> PathBuf {
     if cfg!(target_os = "windows") {
         println!("cargo:rustc-link-lib=static=libbfio");
 
-        // Also static-link deps.
+        // Also static-link deps (otherwise we'll get missing symbols at link time).
         println!("cargo:rustc-link-lib=static=libcerror");
         println!("cargo:rustc-link-lib=static=libcdata");
         println!("cargo:rustc-link-lib=static=libcthreads");
@@ -223,7 +230,7 @@ fn build_and_link_dynamic() -> PathBuf {
 }
 
 fn main() {
-    let target = if cfg!(feature = "static_link") {
+    let include_folder_path = if cfg!(feature = "static_link") {
         println!("Building static bindings");
         build_and_link_static()
     } else {
@@ -237,7 +244,7 @@ fn main() {
     let bindings = bindgen::Builder::default()
         // The input header we would like to generate
         // bindings for.
-        .clang_args(&[format!("-I{}/include", target.to_string_lossy())])
+        .clang_args(&[format!("-I{}", include_folder_path.to_string_lossy())])
         .header("wrapper.h")
         // Finish the builder and generate the bindings.
         .generate()
