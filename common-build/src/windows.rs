@@ -1,10 +1,12 @@
 use failure::{bail, Error};
 use std::env;
-use std::fs::File;
+use std::fs::{File, remove_dir_all};
 use std::io;
 use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
+use walkdir::WalkDir;
+use encoding_rs_io::DecodeReaderBytesBuilder;
 
 /// Build the lib on windows (using msbuild and libyal's vstools).
 /// Require python to be installed.
@@ -32,7 +34,7 @@ pub fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
         .expect("autogen failed");
 
     // The folder might not exists from a previous build, but we don't care.
-    let _ = std::fs::remove_dir_all(&lib_path.join("vs2015"));
+    let _ = remove_dir_all(&lib_path.join("vs2015"));
 
     let lib_name = lib_path.file_name().unwrap().to_string_lossy().into_owned();
 
@@ -107,9 +109,8 @@ pub fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
         .into_iter()
         .map(|dir_name| lib_path.join(dir_name))
         .collect();
-    let autogen_dirs_walk = autogen_dirs.iter().map(walkdir::WalkDir::new).flatten();
 
-    for file_entry in autogen_dirs_walk {
+    for file_entry in autogen_dirs.iter().map(WalkDir::new).flatten() {
         let file_entry = file_entry.unwrap();
         let file_path = file_entry.path();
         let file_name = file_path.file_name().unwrap().to_string_lossy();
@@ -131,7 +132,7 @@ pub fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
 fn utf16le_to_utf8(file_path: &PathBuf) -> Result<(), Error> {
     let h_file = File::open(&file_path)?;
 
-    let mut transcoded = encoding_rs_io::DecodeReaderBytesBuilder::new()
+    let mut transcoded = DecodeReaderBytesBuilder::new()
         .encoding(Some(encoding_rs::UTF_16LE))
         .build(h_file);
 

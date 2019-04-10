@@ -41,11 +41,12 @@ fn build_and_link_dynamic() -> PathBuf {
 }
 
 fn main() {
+    // We ignore changes to the C library because it is always changed by the build process.
+    println!("cargo:rerun-if-changed=src");
+
     let include_folder_path = if cfg!(feature = "dynamic_link") {
-        println!("Building dynamic bindings");
         build_and_link_dynamic()
     } else {
-        println!("Building static bindings");
         build_and_link_static()
     };
 

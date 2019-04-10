@@ -13,10 +13,29 @@ fn build_and_link_static() -> PathBuf {
     if cfg!(target_os = "windows") {
         println!("cargo:rustc-link-lib=static=libfsntfs");
 
-    // Also static-link deps (otherwise we'll get missing symbols at link time).
-    // println!("cargo:rustc-link-lib=static=libcerror");
-    // println!("cargo:rustc-link-lib=static=libcdata");
-    // println!("cargo:rustc-link-lib=static=libcthreads");
+        // Also static-link deps (otherwise we'll get missing symbols at link time).
+        let deps = [
+            "libbfio",
+            "libcdata",
+            "libcerror",
+            "libcfile",
+            "libclocale",
+            "libcnotify",
+            "libcpath",
+            "libcsplit",
+            "libcthreads",
+            "libfcache",
+            "libfdata",
+            "libfdatetime",
+            "libfguid",
+            "libfusn",
+            "libfwnt",
+            "libuna",
+        ];
+
+        for dep in deps.iter() {
+            println!("cargo:rustc-link-lib=static={}", dep);
+        }
     } else {
         println!("cargo:rustc-link-lib=static=fsntfs");
     }
@@ -41,11 +60,12 @@ fn build_and_link_dynamic() -> PathBuf {
 }
 
 fn main() {
+    // We ignore changes to the C library because it is always changed by the build process.
+    println!("cargo:rerun-if-changed=src");
+
     let include_folder_path = if cfg!(feature = "dynamic_link") {
-        println!("Building dynamic bindings");
         build_and_link_dynamic()
     } else {
-        println!("Building static bindings");
         build_and_link_static()
     };
 
