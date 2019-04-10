@@ -34,9 +34,8 @@ failure = "0.1.5"
 
 default = []
 
-# Use when building static bindings
-# it's possible to define LIBFSNTFS_STATIC_LIBPATH to build against local checkout of the library.
-static_link = ["libfsntfs-sys/static_link", "libbfio-rs/static_link"]
+# Use when building dynamic bindings.
+dynamic_link = ["libfsntfs-sys/dynamic_link", "libbfio-rs/dynamic_link"]
 
 [[example]]
 name = "file_attributes"

@@ -13,12 +13,11 @@ links = "libbfio"
 
 [build-dependencies]
 failure = "0.1.5"
-bindgen = "*"
+libyal-rs-common-build = {path = "../common-build"}
 
 [features]
 
 default = []
 
-# Use when building static bindings
-# it's possible to define LIBBFIO_STATIC_LIBPATH to build against local checkout of the library.
-static_link = []
+# Use when building dynamic bindings.
+dynamic_link = []
