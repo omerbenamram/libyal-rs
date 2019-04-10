@@ -1,2 +1,2 @@
 [workspace]
-members = ["common", "libbfio-sys", "libbfio", "libfsntfs-sys", "libfsntfs"]
+members = ["common", "common-build", "libbfio-sys", "libbfio", "libfsntfs-sys", "libfsntfs"]
