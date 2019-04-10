@@ -9,3 +9,7 @@
 [submodule "vstools"]
 	path = vstools
 	url = https://github.com/libyal/vstools.git
+[submodule "libcerror-sys/libcerror"]
+	path = libcerror-sys/libcerror
+	url = https://github.com/libyal/libcerror.git
+	branch = master
