@@ -1,7 +1,7 @@
 use crate::error::Error;
 use crate::ffi_error::{LibfsntfsError, LibfsntfsErrorRef, LibfsntfsErrorRefMut};
 use crate::file_entry::{FileEntry, FileEntryRef, FileEntryRefMut};
-use libbfio_rs::handle::{HandleRef, Handle};
+use libbfio_rs::handle::{Handle, HandleRef};
 use libfsntfs_sys::{
     libfsntfs_file_entry_t, size32_t, LIBFSNTFS_ACCESS_FLAGS,
     LIBFSNTFS_ACCESS_FLAGS_LIBFSNTFS_ACCESS_FLAG_READ,
@@ -429,7 +429,12 @@ mod tests {
     #[test]
     fn test_opens_volume_file_io_works() {
         let handle = sample_volume_io_handle().unwrap();
-        assert!(Volume::open_file_object(&handle).is_ok());
+        let sample_volume_from_io = Volume::open_file_object(&handle).unwrap();
+
+        let volume_name_from_disk = sample_volume().unwrap().get_name().unwrap();
+        let volume_name_from_io_handle = sample_volume_from_io.get_name().unwrap();
+
+        assert_eq!(volume_name_from_disk, volume_name_from_io_handle)
     }
 
     #[test]

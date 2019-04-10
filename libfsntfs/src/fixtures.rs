@@ -5,7 +5,7 @@ use crate::volume::{AccessMode, Volume};
 use env_logger;
 use lazy_static::lazy_static;
 use std::path::PathBuf;
-use libbfio_rs::handle::Handle;
+use libbfio_rs::handle::{Handle, LibbfioAccessFlags};
 
 lazy_static! {
     static ref LOGGER_INIT: () = {
@@ -30,7 +30,7 @@ pub fn sample_volume_path() -> String {
 
 pub fn sample_volume_io_handle() -> Result<Handle, Error> {
     let volume_path = sample_volume_path();
-    Ok(Handle::open_file(volume_path).expect("libbfio failed"))
+    Ok(Handle::open_file(volume_path, LibbfioAccessFlags::Read).expect("libbfio failed"))
 }
 
 pub fn sample_volume() -> Result<Volume, Error> {

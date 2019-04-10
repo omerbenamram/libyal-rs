@@ -266,7 +266,11 @@ impl Handle {
         let mut handle = ptr::null_mut();
         let mut error = ptr::null_mut();
 
-        let io_handle = Box::new(f.expect("failed to open file")) as Box<dyn RwSeek>;
+        let io_handle = IoHandle {
+            inner: Box::new(f.expect("failed to open file")) as Box<dyn RwSeek>,
+            is_open: true
+        };
+
         let heap_ptr = Box::into_raw(Box::new(io_handle));
 
         let retcode = unsafe {
@@ -281,7 +285,7 @@ impl Handle {
                 Some(io_handle_write),
                 Some(io_handle_seek),
                 None,
-                None,
+                Some(io_handle_is_open),
                 Some(io_handle_get_size),
                 // LibbfioFlagIoHandleManaged
                 1,
@@ -519,7 +523,7 @@ mod tests {
         let mut handle = Handle::open_file(&test_file_path, LibbfioAccessFlags::Read).unwrap();
         assert!(handle.write(b"Hello").is_err());
     }
-    
+
     #[test]
     fn test_seek() {
         let tmp_dir = tmp_src_dir();

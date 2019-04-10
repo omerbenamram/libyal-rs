@@ -15,7 +15,11 @@ use std::slice;
 pub trait RwSeek: Read + Write + Seek {}
 impl<T: Read + Write + Seek> RwSeek for T {}
 
-pub type IoHandle = Box<dyn RwSeek>;
+// TODO: after finializing structure, make a constructor
+pub struct IoHandle {
+    pub inner: Box<dyn RwSeek>,
+    pub is_open: bool,
+}
 
 pub const IO_ERR: i32 = LIBCERROR_ERROR_DOMAINS_LIBCERROR_ERROR_DOMAIN_IO as i32;
 pub const ARGUMENT_ERR: i32 = LIBCERROR_ERROR_DOMAINS_LIBCERROR_ERROR_DOMAIN_ARGUMENTS as i32;
@@ -41,7 +45,7 @@ pub unsafe extern "C" fn io_handle_read(
     trace!("io_handle_read");
 
     let s = slice::from_raw_parts_mut(buffer, size);
-    match (*io_handle).read(s) {
+    match (*io_handle).inner.read(s) {
         Ok(cnt) => cnt as isize,
         Err(e) => {
             libcerror_error_set(
@@ -68,7 +72,7 @@ pub unsafe extern "C" fn io_handle_write(
     trace!("io_handle_write");
 
     let s = slice::from_raw_parts(buffer, size);
-    match (*io_handle).write(s) {
+    match (*io_handle).inner.write(s) {
         Ok(cnt) => cnt as isize,
         Err(e) => {
             libcerror_error_set(
@@ -82,6 +86,18 @@ pub unsafe extern "C" fn io_handle_write(
             );
             return -1;
         }
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn io_handle_is_open(
+    io_handle: IoHandleRefMut,
+    error: *mut LibbfioErrorRefMut,
+) -> c_int {
+    trace!("io_handle_is_open");
+    match (*io_handle).is_open {
+        true => 1,
+        false => 0,
     }
 }
 
@@ -110,7 +126,7 @@ pub unsafe extern "C" fn io_handle_seek(
         }
     };
 
-    match (*io_handle).seek(seek_from) {
+    match (*io_handle).inner.seek(seek_from) {
         Ok(count) => count,
         Err(e) => {
             libcerror_error_set(
@@ -134,7 +150,7 @@ pub unsafe extern "C" fn io_handle_get_size(
     error: *mut LibbfioErrorRefMut,
 ) -> c_int {
     trace!("io_handle_get_size");
-    match (*io_handle).stream_len() {
+    match (*io_handle).inner.stream_len() {
         Ok(count) => {
             *size = count;
             return 1;
