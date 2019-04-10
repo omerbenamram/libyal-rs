@@ -543,12 +543,8 @@ dependencies = [
 name = "libbfio-sys"
 version = "0.1.3"
 dependencies = [
- "bindgen 0.49.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "cc 1.0.34 (registry+https://github.com/rust-lang/crates.io-index)",
- "encoding_rs 0.8.17 (registry+https://github.com/rust-lang/crates.io-index)",
- "encoding_rs_io 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "walkdir 2.2.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libyal-rs-common-build 0.1.3",
 ]
 
 [[package]]
@@ -578,11 +574,8 @@ dependencies = [
 name = "libfsntfs-sys"
 version = "0.1.3"
 dependencies = [
- "bindgen 0.49.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "flate2 1.0.7 (registry+https://github.com/rust-lang/crates.io-index)",
- "reqwest 0.9.13 (registry+https://github.com/rust-lang/crates.io-index)",
- "tar 0.4.22 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libyal-rs-common-build 0.1.3",
 ]
 
 [[package]]
@@ -604,6 +597,18 @@ dependencies = [
  "lazy_static 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "time 0.1.42 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "libyal-rs-common-build"
+version = "0.1.3"
+dependencies = [
+ "bindgen 0.49.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cc 1.0.34 (registry+https://github.com/rust-lang/crates.io-index)",
+ "encoding_rs 0.8.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "encoding_rs_io 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "walkdir 2.2.7 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
