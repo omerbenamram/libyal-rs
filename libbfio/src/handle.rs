@@ -3,9 +3,12 @@ use crate::ffi_error::LibbfioErrorRefMut;
 use crate::io_handle::IoHandle;
 use crate::io_handle::*;
 use libyal_rs_common::ffi::AsTypeRef;
+
+use libbfio_sys::{size64_t, SEEK_CUR, SEEK_END, SEEK_SET};
 use std::convert::TryFrom;
 
-use std::io::Read;
+use std::fs::File;
+use std::io::{Read, Seek, SeekFrom, Write};
 use std::os::raw::c_int;
 use std::path::Path;
 use std::{io, ptr};
@@ -212,42 +215,24 @@ extern "C" {
     ) -> c_int;
 }
 
-impl Drop for Handle {
-    fn drop(&mut self) {
-        use libyal_rs_common::ffi::AsTypeRef;
-        use log::trace;
-
-        let mut error = ptr::null_mut();
-
-        println!("Calling `libbfio_handle_free`");
-
-        unsafe {
-            libbfio_handle_free(&mut self.as_type_ref_mut() as *mut _, &mut error);
-        }
-
-        println!("Called `libbfio_handle_free`");
-
-        if !(error.is_null()) {
-            let e = Error::try_from(error).expect("Failed to read error");
-            dbg!(e);
-        }
-
-        debug_assert!(error.is_null(), "`{}` failed!", module_path!());
-    }
-}
-
 impl Handle {
     pub fn open_file(path: impl AsRef<Path>) -> Result<Handle, Error> {
+        let mut x = File::open(path).expect("Failed to open file");
+        let io_handle = Box::new(x) as Box<dyn RwSeek>;
+        Self::open(io_handle)
+    }
+
+    pub fn open(read_write_seek: Box<dyn RwSeek>) -> Result<Handle, Error> {
         let mut handle = ptr::null_mut();
         let mut error = ptr::null_mut();
 
-        let io_handle = open_file(path).expect("open file");
-        let boxed_handle = Box::new(io_handle);
+        let boxed_handle = Box::new(read_write_seek);
+        let heap_ptr = Box::into_raw(boxed_handle);
 
         let retcode = unsafe {
             libbfio_handle_initialize(
                 &mut handle as _,
-                Box::into_raw(boxed_handle),
+                heap_ptr,
                 Some(io_handle_free),
                 None,
                 None,
@@ -279,7 +264,7 @@ impl Read for Handle {
             libbfio_handle_read_buffer(self.as_type_ref(), buf.as_mut_ptr(), buf.len(), &mut error)
         };
 
-        if read_count <= -1 {
+        if !(error.is_null()) {
             let ffi_err = Error::try_from(error);
 
             let io_err = match ffi_err {
@@ -297,12 +282,109 @@ impl Read for Handle {
     }
 }
 
+impl Write for Handle {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        let mut error = ptr::null_mut();
+        let write_count = unsafe {
+            libbfio_handle_write_buffer(self.as_type_ref(), buf.as_ptr(), buf.len(), &mut error)
+        };
+
+        if !(error.is_null()) {
+            let ffi_err = Error::try_from(error);
+
+            let io_err = match ffi_err {
+                Ok(e) => io::Error::new(io::ErrorKind::Other, format!("{}", e)),
+                Err(_e) => io::Error::new(
+                    io::ErrorKind::Other,
+                    format!("error while getting error information"),
+                ),
+            };
+
+            Err(io_err)
+        } else {
+            Ok(write_count as usize)
+        }
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
+
+impl Seek for Handle {
+    fn seek(&mut self, pos: SeekFrom) -> io::Result<u64> {
+        let mut error = ptr::null_mut();
+        let seek_count = unsafe {
+            match pos {
+                SeekFrom::Current(p) => libbfio_handle_seek_offset(
+                    self.as_type_ref(),
+                    p as u64,
+                    SEEK_CUR as c_int,
+                    &mut error,
+                ),
+                SeekFrom::End(p) => libbfio_handle_seek_offset(
+                    self.as_type_ref(),
+                    p as u64,
+                    SEEK_END as c_int,
+                    &mut error,
+                ),
+                SeekFrom::Start(p) => libbfio_handle_seek_offset(
+                    self.as_type_ref(),
+                    p as u64,
+                    SEEK_SET as c_int,
+                    &mut error,
+                ),
+            }
+        };
+
+        if !(error.is_null()) {
+            let ffi_err = Error::try_from(error);
+
+            let io_err = match ffi_err {
+                Ok(e) => io::Error::new(io::ErrorKind::Other, format!("{}", e)),
+                Err(_e) => io::Error::new(
+                    io::ErrorKind::Other,
+                    format!("error while getting error information"),
+                ),
+            };
+
+            Err(io_err)
+        } else {
+            Ok(seek_count as u64)
+        }
+    }
+}
+
+impl Drop for Handle {
+    fn drop(&mut self) {
+        use libyal_rs_common::ffi::AsTypeRef;
+        use log::trace;
+
+        let mut error = ptr::null_mut();
+
+        println!("Calling `libbfio_handle_free`");
+
+        unsafe {
+            libbfio_handle_free(&mut self.as_type_ref_mut() as *mut _, &mut error);
+        }
+
+        println!("Called `libbfio_handle_free`");
+
+        if !(error.is_null()) {
+            let e = Error::try_from(error).expect("Failed to read error");
+            dbg!(e);
+        }
+
+        debug_assert!(error.is_null(), "`{}` failed!", module_path!());
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::handle::Handle;
 
     use std::fs::File;
-    use std::io::{Read, Write};
+    use std::io::{Read, Seek, SeekFrom, Write};
 
     use tempdir::TempDir;
 
@@ -328,7 +410,7 @@ mod tests {
     }
 
     #[test]
-    fn it_works() {
+    fn test_read() {
         let tmp_dir = tmp_src_dir();
         let test_file = test_file(&tmp_dir, Some(FILE_CONTENT));
         let test_file_path = tmp_dir.path().join(test_file).canonicalize().unwrap();
@@ -339,5 +421,37 @@ mod tests {
         handle.read_to_end(&mut buf).unwrap();
 
         assert_eq!(buf, FILE_CONTENT);
+    }
+
+    #[test]
+    fn test_write() {
+        let tmp_dir = tmp_src_dir();
+        let test_file = test_file(&tmp_dir, Some(FILE_CONTENT));
+        let test_file_path = tmp_dir.path().join(test_file).canonicalize().unwrap();
+
+        let mut handle = Handle::open_file(&test_file_path).unwrap();
+
+        handle.write(b"Hello").unwrap();
+
+        let mut new = File::open(test_file_path).unwrap();
+        let mut buf = vec![];
+        new.read_to_end(&mut buf).unwrap();
+
+        assert_eq!(buf, FILE_CONTENT);
+    }
+
+    #[test]
+    fn test_seek() {
+        let tmp_dir = tmp_src_dir();
+        let test_file = test_file(&tmp_dir, Some(FILE_CONTENT));
+        let test_file_path = tmp_dir.path().join(test_file).canonicalize().unwrap();
+
+        let mut handle = Handle::open_file(test_file_path).unwrap();
+        let mut buf = vec![];
+
+        handle.seek(SeekFrom::Current(2)).unwrap();
+        handle.read_to_end(&mut buf).unwrap();
+
+        assert_eq!(buf, &FILE_CONTENT[2..]);
     }
 }
