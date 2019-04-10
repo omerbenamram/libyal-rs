@@ -12,11 +12,8 @@ edition = "2018"
 links = "libfsntfs"
 
 [build-dependencies]
-reqwest = "0.9.13"
-flate2 = "1.0.7"
-tar = "0.4.22"
 failure = "0.1.5"
-bindgen = "*"
+libyal-rs-common-build = {path = "../common-build"}
 
 [features]
 

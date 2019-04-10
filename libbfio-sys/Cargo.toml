@@ -13,7 +13,6 @@ links = "libbfio"
 
 [build-dependencies]
 failure = "0.1.5"
-bindgen = "*"
 libyal-rs-common-build = {path = "../common-build"}
 
 [features]

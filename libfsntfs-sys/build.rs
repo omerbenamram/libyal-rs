@@ -1,150 +1,53 @@
-extern crate bindgen;
-
 use failure::{bail, Error};
-use flate2::read::GzDecoder;
-use reqwest;
+use libyal_rs_common_build::{build_lib, generate_bindings};
 use std::env;
-use std::fs::File;
-use std::io;
 use std::path::PathBuf;
-use std::process::{Command, Stdio};
-use tar::Archive;
 
-static LIBFSNTFS_TAR_GZ_URL: &'static str = "https://github.com/libyal/libfsntfs/releases/download/20190104/libfsntfs-experimental-20190104.tar.gz";
-static LIBFSNTFS_EXPECTED_DIR_NAME: &'static str = "libfsntfs-20190104";
-
-fn download_libfsntfs() -> Result<PathBuf, Error> {
-    let temp = PathBuf::from(env::var("OUT_DIR").unwrap());
-    let expected_path = temp.join(LIBFSNTFS_EXPECTED_DIR_NAME);
-
-    // rust can cache the build directory for us when developing
-    if !expected_path.exists() {
-        println!("Downloading libfsntfs: from '{}'", LIBFSNTFS_TAR_GZ_URL);
-        let mut response = reqwest::get(LIBFSNTFS_TAR_GZ_URL)?;
-
-        let (mut dest, p) = {
-            let fname = response
-                .url()
-                .path_segments()
-                .and_then(|segments| segments.last())
-                .and_then(|name| if name.is_empty() { None } else { Some(name) })
-                .unwrap_or("tmp.bin");
-
-            let fname = temp.join(fname);
-            (File::create(&fname)?, fname)
-        };
-
-        io::copy(&mut response, &mut dest)?;
-
-        let tar_gz = File::open(p)?;
-        let tar = GzDecoder::new(tar_gz);
-        let mut archive = Archive::new(tar);
-        archive.unpack(&temp)?;
-    }
-
-    if !expected_path.exists() {
-        bail!(
-            "Expected to find `{}` at `{}`",
-            LIBFSNTFS_EXPECTED_DIR_NAME,
-            temp.display()
-        );
-    }
-
-    Ok(expected_path)
-}
-
-fn build_static() {
-    let libfsntfs = if let Ok(local_install) = env::var("LIBFSNTFS_STATIC_LIBPATH") {
+fn build_and_link_static() -> PathBuf {
+    let libfsntfs = if let Ok(local_install) = env::var("LIBFSNTFS_LIBPATH") {
         PathBuf::from(local_install)
     } else {
-        download_libfsntfs().expect("Failed to download libfsntfs")
+        env::current_dir().unwrap().join("libfsntfs")
     };
 
-    let target = libfsntfs.join("dist");
+    if cfg!(target_os = "windows") {
+        println!("cargo:rustc-link-lib=static=libfsntfs");
 
-    println!("building with prefix={}", target.display());
+    // Also static-link deps (otherwise we'll get missing symbols at link time).
+    // println!("cargo:rustc-link-lib=static=libcerror");
+    // println!("cargo:rustc-link-lib=static=libcdata");
+    // println!("cargo:rustc-link-lib=static=libcthreads");
+    } else {
+        println!("cargo:rustc-link-lib=static=fsntfs");
+    }
 
-    Command::new("sh")
-        .arg("configure")
-        .arg("--enable-shared=no")
-        .arg(format!("--prefix={}", target.display()))
-        .current_dir(&libfsntfs)
-        .stderr(Stdio::inherit())
-        .stdout(Stdio::inherit())
-        .status()
-        .expect("configure failed");
-
-    Command::new("make")
-        .current_dir(&libfsntfs)
-        .stderr(Stdio::inherit())
-        .stdout(Stdio::inherit())
-        .status()
-        .expect("make failed");
-
-    Command::new("make")
-        .arg("install")
-        .current_dir(&libfsntfs)
-        .stderr(Stdio::inherit())
-        .stdout(Stdio::inherit())
-        .status()
-        .expect("make install failed");
-
-    assert!(
-        target.join("lib").exists(),
-        "Expected {} to exist",
-        target.join("lib").display()
-    );
-
-    println!("cargo:rustc-link-lib=static=fsntfs");
-    println!(
-        "cargo:rustc-link-search=native={}",
-        target.join("lib").canonicalize().unwrap().display()
-    );
+    build_lib(libfsntfs, false)
 }
 
-fn link_dynamic() {
-    if let Ok(location) = env::var("LIBFSNTFS_DYNAMIC_LIBPATH") {
-        assert!(
-            PathBuf::from(&location).exists(),
-            "path passed in LIBFSNTFS_DYNAMIC_LIBPATH does not exist!"
-        );
-        println!("cargo:rustc-link-search=native={}", location);
+fn build_and_link_dynamic() -> PathBuf {
+    let libfsntfs = if let Ok(local_install) = env::var("LIBFSNTFS_LIBPATH") {
+        PathBuf::from(local_install)
+    } else {
+        env::current_dir().unwrap().join("libfsntfs")
+    };
+
+    if cfg!(target_os = "windows") {
+        println!("cargo:rustc-link-lib=dylib=libfsntfs");
+    } else {
+        println!("cargo:rustc-link-lib=dylib=fsntfs");
     }
-    println!("cargo:rustc-link-lib=dylib=fsntfs");
+
+    build_lib(libfsntfs, true)
 }
 
 fn main() {
-    // The bindgen::Builder is the main entry point
-    // to bindgen, and lets you build up options for
-    // the resulting bindings.
-    let bindings = bindgen::Builder::default()
-        // The input header we would like to generate
-        // bindings for.
-        .header("wrapper.h")
-        .clang_args(&[
-            "-Ilibfsntfs",
-            "-Ilibfsntfs/common",
-            "-Ilibfsntfs/include",
-            "-Ilibfsntfs/common",
-            "-Ilibfsntfs/libcerror",
-        ])
-        // Finish the builder and generate the bindings.
-        .generate()
-        // Unwrap the Result and panic on failure.
-        .expect("Unable to generate bindings");
-
-    // Write the bindings to the $OUT_DIR/bindings.rs file.
-    let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
-
-    bindings
-        .write_to_file(out_path.join("bindings.rs"))
-        .expect("Couldn't write bindings!");
-
-    if cfg!(feature = "dynamic_link") {
-        println!("Building static bindings");
-        return build_static();
-    } else {
+    let include_folder_path = if cfg!(feature = "dynamic_link") {
         println!("Building dynamic bindings");
-        return link_dynamic();
-    }
+        build_and_link_dynamic()
+    } else {
+        println!("Building static bindings");
+        build_and_link_static()
+    };
+
+    generate_bindings(&include_folder_path, "wrapper.h");
 }
