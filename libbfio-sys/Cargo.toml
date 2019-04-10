@@ -14,12 +14,7 @@ links = "libbfio"
 [build-dependencies]
 failure = "0.1.5"
 bindgen = "*"
-
-[target.'cfg(target_os = "windows")'.build-dependencies]
-cc = "*"
-encoding_rs = "*"
-encoding_rs_io = "*"
-walkdir = "*"
+libyal-rs-common-build = {path = "../common-build"}
 
 [features]
 
