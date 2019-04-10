@@ -108,7 +108,7 @@ fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
 
     let lib_name = lib_path.file_name().unwrap().to_string_lossy().into_owned();
 
-    Command::new(&python_exec)
+    let py_convert_status = Command::new(&python_exec)
         .arg("..\\..\\vstools\\scripts\\msvscpp-convert.py")
         .arg("--extend-with-x64")
         .arg("--output-format")
@@ -118,11 +118,22 @@ fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
         .env("PYTHONPATH", "..\\..\\vstools")
         .stderr(Stdio::inherit())
         .stdout(Stdio::inherit())
-        .status()
-        .expect(
-            "Converting the solution failed. \
-             Python (2 or 3) is required. You might need to set PYTHON_SYS_EXECUTABLE",
-        );
+        .status();
+
+    match py_convert_status {
+        Err(err) => {
+            if err.kind() == io::ErrorKind::NotFound {
+                panic!(format!(
+                    "Could not find python at {}, \
+                     You might need to set PYTHON_SYS_EXECUTABLE: {:?}",
+                    python_exec, err
+                ));
+            } else {
+                panic!(format!("Failed to convert the solution: {:?}", err));
+            }
+        }
+        Ok(_) => {}
+    };
 
     let target = env::var("TARGET").unwrap();
 
@@ -164,7 +175,10 @@ fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
     // h files created by autogen.ps1 (`.in.h` -> `.h`) are UTF16LE encoded,
     // which llvm (and therefore bindgen) does not accept.
     // So convert them back to UTF8.
-    let autogen_dirs: Vec<PathBuf> = ["common", "include", &lib_name].into_iter().map(|dir_name| lib_path.join(dir_name)).collect();
+    let autogen_dirs: Vec<PathBuf> = ["common", "include", &lib_name]
+        .into_iter()
+        .map(|dir_name| lib_path.join(dir_name))
+        .collect();
     let autogen_dirs_walk = autogen_dirs.iter().map(walkdir::WalkDir::new).flatten();
 
     for file_entry in autogen_dirs_walk {
