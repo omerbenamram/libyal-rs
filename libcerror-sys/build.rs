@@ -12,11 +12,6 @@ fn build_and_link_static() -> PathBuf {
 
     if cfg!(target_os = "windows") {
         println!("cargo:rustc-link-lib=static=libcerror");
-
-        // Also static-link deps (otherwise we'll get missing symbols at link time).
-        println!("cargo:rustc-link-lib=static=libcerror");
-        println!("cargo:rustc-link-lib=static=libcdata");
-        println!("cargo:rustc-link-lib=static=libcthreads");
     } else {
         println!("cargo:rustc-link-lib=static=cerror");
     }

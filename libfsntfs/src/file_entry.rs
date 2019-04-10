@@ -645,6 +645,24 @@ impl<'a> FileEntry<'a> {
         }
     }
 
+    pub fn get_file_reference(&self) -> Result<u64, Error> {
+        let mut file_idx = 0;
+        let mut error = ptr::null_mut();
+
+        if unsafe {
+            libfsntfs_file_entry_get_file_reference(
+                self.as_type_ref(),
+                &mut file_idx,
+                &mut error,
+            )
+        } != 1
+        {
+            Err(Error::try_from(error)?)
+        } else {
+            Ok(file_idx)
+        }
+    }
+
     pub fn get_base_record_file_reference(&self) {
         unimplemented!();
     }
@@ -670,10 +688,6 @@ impl<'a> FileEntry<'a> {
     }
 
     pub fn get_file_attribute_flags(&self) {
-        unimplemented!();
-    }
-
-    pub fn get_file_reference(&self) {
         unimplemented!();
     }
 

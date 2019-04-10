@@ -1,9 +1,9 @@
 use crate::error::Error;
-use libyal_rs_common::ffi::AsTypeRef;
 use crate::ffi_error::{LibfsntfsErrorRef, LibfsntfsErrorRefMut};
 use crate::file_entry::FileEntry;
-use libfsntfs_sys::size64_t;
 use chrono::{Date, DateTime, NaiveDateTime, Utc};
+use libfsntfs_sys::size64_t;
+use libyal_rs_common::ffi::AsTypeRef;
 use log::error;
 use std::convert::TryFrom;
 use std::fmt::Debug;
@@ -432,7 +432,7 @@ pub struct StandardInformation {
 #[derive(Debug, Clone)]
 pub struct FileName {
     pub name: String,
-    pub parent_file_reference: u32,
+    pub parent_file_reference: u64,
     pub creation_time: Option<DateTime<Utc>>,
     pub modification_time: Option<DateTime<Utc>>,
     pub access_time: Option<DateTime<Utc>>,
@@ -520,12 +520,14 @@ impl<'a> Attribute<'a> {
                     libfsntfs_file_name_attribute_get_entry_modification_time
                 )?;
 
-                // TODO: implement
-                // let file_attribute_flags =libfsntfs_file_name_attribute_get_file_attribute_flags;
+                let parent_file_reference = get_u64_field!(
+                    self,
+                    libfsntfs_file_name_attribute_get_parent_file_reference
+                )?;
 
                 Ok(AttributeWithInformation::FileName(FileName {
                     name,
-                    parent_file_reference: 0,
+                    parent_file_reference,
                     creation_time,
                     modification_time,
                     access_time,

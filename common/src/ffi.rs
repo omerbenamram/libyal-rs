@@ -126,3 +126,17 @@ macro_rules! get_date_field {
         }
     }};
 }
+
+#[macro_export]
+macro_rules! get_u64_field {
+    ($self: ident, $getter: ident) => {{
+        let mut value = 0_u64;
+        let mut error = ptr::null_mut();
+
+        if unsafe { $getter($self.as_type_ref(), &mut value, &mut error) } != 1 {
+            Err(Error::try_from(error)?)
+        } else {
+            Ok(value)
+        }
+    }};
+}
