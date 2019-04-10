@@ -7,7 +7,7 @@ use libyal_rs_common::ffi::AsTypeRef;
 use libbfio_sys::{size64_t, SEEK_CUR, SEEK_END, SEEK_SET};
 use std::convert::TryFrom;
 
-use std::fs::File;
+use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::os::raw::c_int;
 use std::path::Path;
@@ -51,6 +51,46 @@ impl Handle {
 pub type IoHandleConstRef = *const IoHandle;
 pub type IoHandleRefMut = *mut IoHandle;
 pub type BoxedIoHandleRefMut = *mut *mut IoHandle;
+
+//enum LibbfioFlags {
+//    /* The IO handle is not managed by the library
+//     */
+//    IoHandleNonManaged = 0x00,
+//
+//    /* The IO handle is managed by the library
+//     */
+//    IoHandleManaged = 0x01,
+//
+//    /* The IO handle is cloned by the function
+//     */
+//    CloneByFunction = 0x00,
+//
+//    /* The IO handle is not cloned, but passed as a reference
+//     */
+//    CloneByReference = 0x02,
+//}
+
+/* The access flags definitions
+ * bit 1						set to 1 for read access
+ * bit 2						set to 1 for write access
+ * bit 3						set to 1 to truncate an existing file on write
+ * bit 4-8						not used
+ */
+pub enum LibbfioAccessFlags {
+    Read = 0x01,
+    Write = 0x02,
+    Truncate = 0x04,
+}
+
+impl LibbfioAccessFlags {
+    pub fn to_int(&self) -> c_int {
+        match self {
+            LibbfioAccessFlags::Read => 0x01,
+            LibbfioAccessFlags::Write => 0x02,
+            LibbfioAccessFlags::Truncate => 0x04,
+        }
+    }
+}
 
 extern "C" {
     pub fn libbfio_handle_initialize(
@@ -216,18 +256,18 @@ extern "C" {
 }
 
 impl Handle {
-    pub fn open_file(path: impl AsRef<Path>) -> Result<Handle, Error> {
-        let mut x = File::open(path).expect("Failed to open file");
-        let io_handle = Box::new(x) as Box<dyn RwSeek>;
-        Self::open(io_handle)
-    }
+    pub fn open_file(path: impl AsRef<Path>, flags: LibbfioAccessFlags) -> Result<Handle, Error> {
+        let f = match flags {
+            LibbfioAccessFlags::Read => OpenOptions::new().read(true).open(path),
+            LibbfioAccessFlags::Write => OpenOptions::new().write(true).open(path),
+            LibbfioAccessFlags::Truncate => OpenOptions::new().create(true).open(path),
+        };
 
-    pub fn open(read_write_seek: Box<dyn RwSeek>) -> Result<Handle, Error> {
         let mut handle = ptr::null_mut();
         let mut error = ptr::null_mut();
 
-        let boxed_handle = Box::new(read_write_seek);
-        let heap_ptr = Box::into_raw(boxed_handle);
+        let io_handle = Box::new(f.expect("failed to open file")) as Box<dyn RwSeek>;
+        let heap_ptr = Box::into_raw(Box::new(io_handle));
 
         let retcode = unsafe {
             libbfio_handle_initialize(
@@ -243,7 +283,7 @@ impl Handle {
                 None,
                 None,
                 Some(io_handle_get_size),
-                // LIBBFIO_FLAG_IO_HANDLE_MANAGED
+                // LibbfioFlagIoHandleManaged
                 1,
                 &mut error,
             )
@@ -252,6 +292,10 @@ impl Handle {
         if retcode != 1 {
             Err(Error::try_from(error)?)
         } else {
+            let mut err = ptr::null_mut();
+            if unsafe { libbfio_handle_set_access_flags(handle, flags.to_int(), &mut err) } != 1 {
+                return Err(Error::try_from(err)?);
+            }
             Ok(Handle::wrap_ptr(handle))
         }
     }
@@ -284,6 +328,31 @@ impl Read for Handle {
 
 impl Write for Handle {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        let mut flags = 0_i32;
+        let mut error = ptr::null_mut();
+        if unsafe { libbfio_handle_get_access_flags(self.as_type_ref(), &mut flags, &mut error) }
+            != 1
+        {
+            let ffi_err = Error::try_from(error);
+
+            let io_err = match ffi_err {
+                Ok(e) => io::Error::new(io::ErrorKind::Other, format!("{}", e)),
+                Err(_e) => io::Error::new(
+                    io::ErrorKind::Other,
+                    format!("error while getting error information"),
+                ),
+            };
+
+            return Err(io_err);
+        }
+
+        if flags & LibbfioAccessFlags::Write.to_int() == 0 {
+            return Err(io::Error::new(
+                io::ErrorKind::Other,
+                format!("file is not open for writing"),
+            ));
+        };
+
         let mut error = ptr::null_mut();
         let write_count = unsafe {
             libbfio_handle_write_buffer(self.as_type_ref(), buf.as_ptr(), buf.len(), &mut error)
@@ -362,13 +431,13 @@ impl Drop for Handle {
 
         let mut error = ptr::null_mut();
 
-        println!("Calling `libbfio_handle_free`");
+        trace!("Calling `libbfio_handle_free`");
 
         unsafe {
             libbfio_handle_free(&mut self.as_type_ref_mut() as *mut _, &mut error);
         }
 
-        println!("Called `libbfio_handle_free`");
+        trace!("Called `libbfio_handle_free`");
 
         if !(error.is_null()) {
             let e = Error::try_from(error).expect("Failed to read error");
@@ -381,7 +450,7 @@ impl Drop for Handle {
 
 #[cfg(test)]
 mod tests {
-    use crate::handle::Handle;
+    use crate::handle::{Handle, LibbfioAccessFlags};
 
     use std::fs::File;
     use std::io::{Read, Seek, SeekFrom, Write};
@@ -415,7 +484,7 @@ mod tests {
         let test_file = test_file(&tmp_dir, Some(FILE_CONTENT));
         let test_file_path = tmp_dir.path().join(test_file).canonicalize().unwrap();
 
-        let mut handle = Handle::open_file(test_file_path).unwrap();
+        let mut handle = Handle::open_file(test_file_path, LibbfioAccessFlags::Read).unwrap();
         let mut buf = vec![];
 
         handle.read_to_end(&mut buf).unwrap();
@@ -429,7 +498,7 @@ mod tests {
         let test_file = test_file(&tmp_dir, Some(FILE_CONTENT));
         let test_file_path = tmp_dir.path().join(test_file).canonicalize().unwrap();
 
-        let mut handle = Handle::open_file(&test_file_path).unwrap();
+        let mut handle = Handle::open_file(&test_file_path, LibbfioAccessFlags::Write).unwrap();
 
         handle.write(b"Hello").unwrap();
 
@@ -441,12 +510,24 @@ mod tests {
     }
 
     #[test]
+    fn test_write_checks_access_flags() {
+        let tmp_dir = tmp_src_dir();
+        let test_file = test_file(&tmp_dir, Some(FILE_CONTENT));
+        let test_file_path = tmp_dir.path().join(test_file).canonicalize().unwrap();
+
+        let mut handle = Handle::open_file(&test_file_path, LibbfioAccessFlags::Read).unwrap();
+
+        assert!(handle.write(b"Hello").is_err());
+    }
+
+
+    #[test]
     fn test_seek() {
         let tmp_dir = tmp_src_dir();
         let test_file = test_file(&tmp_dir, Some(FILE_CONTENT));
         let test_file_path = tmp_dir.path().join(test_file).canonicalize().unwrap();
 
-        let mut handle = Handle::open_file(test_file_path).unwrap();
+        let mut handle = Handle::open_file(test_file_path, LibbfioAccessFlags::Read).unwrap();
         let mut buf = vec![];
 
         handle.seek(SeekFrom::Current(2)).unwrap();
