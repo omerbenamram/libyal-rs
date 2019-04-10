@@ -4,8 +4,8 @@ use crate::io_handle::IoHandle;
 use crate::io_handle::*;
 use libyal_rs_common::ffi::AsTypeRef;
 use std::convert::TryFrom;
-use std::fs::File;
-use std::io::{Read, Seek, Write};
+
+use std::io::Read;
 use std::os::raw::c_int;
 use std::path::Path;
 use std::{io, ptr};
@@ -45,38 +45,43 @@ impl Handle {
     }
 }
 
-type io_handle_t = *mut IoHandle;
+pub type IoHandleConstRef = *const IoHandle;
+pub type IoHandleRefMut = *mut IoHandle;
+pub type BoxedIoHandleRefMut = *mut *mut IoHandle;
 
 extern "C" {
     pub fn libbfio_handle_initialize(
         handle: *mut HandleRefMut,
-        io_handle: io_handle_t,
+        io_handle: IoHandleRefMut,
         free_io_handle: Option<
             unsafe extern "C" fn(
-                io_handle: *mut io_handle_t,
+                io_handle: *mut IoHandleRefMut,
                 error: *mut LibbfioErrorRefMut,
             ) -> c_int,
         >,
         clone_io_handle: Option<
             unsafe extern "C" fn(
-                destination_io_handle: *mut io_handle_t,
-                source_io_handle: io_handle_t,
+                destination_io_handle: BoxedIoHandleRefMut,
+                source_io_handle: IoHandleRefMut,
                 error: *mut LibbfioErrorRefMut,
             ) -> c_int,
         >,
         open: Option<
             unsafe extern "C" fn(
-                io_handle: io_handle_t,
+                io_handle: IoHandleRefMut,
                 access_flags: c_int,
                 error: *mut LibbfioErrorRefMut,
             ) -> c_int,
         >,
         close: Option<
-            unsafe extern "C" fn(io_handle: io_handle_t, error: *mut LibbfioErrorRefMut) -> c_int,
+            unsafe extern "C" fn(
+                io_handle: IoHandleRefMut,
+                error: *mut LibbfioErrorRefMut,
+            ) -> c_int,
         >,
         read: Option<
             unsafe extern "C" fn(
-                io_handle: io_handle_t,
+                io_handle: IoHandleRefMut,
                 buffer: *mut u8,
                 size: usize,
                 error: *mut LibbfioErrorRefMut,
@@ -84,7 +89,7 @@ extern "C" {
         >,
         write: Option<
             unsafe extern "C" fn(
-                io_handle: io_handle_t,
+                io_handle: IoHandleRefMut,
                 buffer: *const u8,
                 size: usize,
                 error: *mut LibbfioErrorRefMut,
@@ -92,21 +97,27 @@ extern "C" {
         >,
         seek_offset: Option<
             unsafe extern "C" fn(
-                io_handle: io_handle_t,
+                io_handle: IoHandleRefMut,
                 offset: u64,
                 whence: c_int,
                 error: *mut LibbfioErrorRefMut,
             ) -> u64,
         >,
         exists: Option<
-            unsafe extern "C" fn(io_handle: io_handle_t, error: *mut LibbfioErrorRefMut) -> c_int,
+            unsafe extern "C" fn(
+                io_handle: IoHandleRefMut,
+                error: *mut LibbfioErrorRefMut,
+            ) -> c_int,
         >,
         is_open: Option<
-            unsafe extern "C" fn(io_handle: io_handle_t, error: *mut LibbfioErrorRefMut) -> c_int,
+            unsafe extern "C" fn(
+                io_handle: IoHandleRefMut,
+                error: *mut LibbfioErrorRefMut,
+            ) -> c_int,
         >,
         get_size: Option<
             unsafe extern "C" fn(
-                io_handle: io_handle_t,
+                io_handle: IoHandleRefMut,
                 size: *mut u64,
                 error: *mut LibbfioErrorRefMut,
             ) -> c_int,
@@ -208,10 +219,17 @@ impl Drop for Handle {
 
         let mut error = ptr::null_mut();
 
-        trace!("Calling `{}`", module_path!());
+        println!("Calling `libbfio_handle_free`");
 
         unsafe {
             libbfio_handle_free(&mut self.as_type_ref_mut() as *mut _, &mut error);
+        }
+
+        println!("Called `libbfio_handle_free`");
+
+        if !(error.is_null()) {
+            let e = Error::try_from(error).expect("Failed to read error");
+            dbg!(e);
         }
 
         debug_assert!(error.is_null(), "`{}` failed!", module_path!());
@@ -223,7 +241,7 @@ impl Handle {
         let mut handle = ptr::null_mut();
         let mut error = ptr::null_mut();
 
-        let io_handle = IoHandle::open_file(path).expect("open file");
+        let io_handle = open_file(path).expect("open file");
         let boxed_handle = Box::new(io_handle);
 
         let retcode = unsafe {
@@ -231,16 +249,17 @@ impl Handle {
                 &mut handle as _,
                 Box::into_raw(boxed_handle),
                 Some(io_handle_free),
-                Some(io_handle_clone),
-                Some(io_handle_open),
-                Some(io_handle_close),
+                None,
+                None,
+                None,
                 Some(io_handle_read),
                 Some(io_handle_write),
                 Some(io_handle_seek),
-                Some(io_handle_exists),
-                Some(io_handle_is_open),
+                None,
+                None,
                 Some(io_handle_get_size),
-                0,
+                // LIBBFIO_FLAG_IO_HANDLE_MANAGED
+                1,
                 &mut error,
             )
         };
@@ -265,7 +284,7 @@ impl Read for Handle {
 
             let io_err = match ffi_err {
                 Ok(e) => io::Error::new(io::ErrorKind::Other, format!("{}", e)),
-                Err(e) => io::Error::new(
+                Err(_e) => io::Error::new(
                     io::ErrorKind::Other,
                     format!("error while getting error information"),
                 ),
@@ -284,7 +303,7 @@ mod tests {
 
     use std::fs::File;
     use std::io::{Read, Write};
-    use std::path::PathBuf;
+
     use tempdir::TempDir;
 
     const TMP_FILE_NAME: &str = "a.txt";
@@ -315,7 +334,7 @@ mod tests {
         let test_file_path = tmp_dir.path().join(test_file).canonicalize().unwrap();
 
         let mut handle = Handle::open_file(test_file_path).unwrap();
-        let mut buf = vec![0; 10];
+        let mut buf = vec![];
 
         handle.read_to_end(&mut buf).unwrap();
 
