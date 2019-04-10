@@ -18,7 +18,7 @@ fn build_and_link_static() -> PathBuf {
         println!("cargo:rustc-link-lib=static=libcdata");
         println!("cargo:rustc-link-lib=static=libcthreads");
     } else {
-        println!("cargo:rustc-link-lib=static=bfio");
+        println!("cargo:rustc-link-lib=static=cerror");
     }
 
     build_lib(libcerror, false)
@@ -34,7 +34,7 @@ fn build_and_link_dynamic() -> PathBuf {
     if cfg!(target_os = "windows") {
         println!("cargo:rustc-link-lib=dylib=libcerror");
     } else {
-        println!("cargo:rustc-link-lib=dylib=bfio");
+        println!("cargo:rustc-link-lib=dylib=cerror");
     }
 
     build_lib(libcerror, true)

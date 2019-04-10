@@ -4,6 +4,8 @@ use libbfio_sys::{size64_t, SEEK_CUR, SEEK_END, SEEK_SET};
 use log::trace;
 
 use crate::handle::{BoxedIoHandleRefMut, IoHandleRefMut};
+use libcerror_sys::*;
+use std::ffi::CString;
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::os::raw::c_int;
@@ -14,6 +16,9 @@ pub trait RwSeek: Read + Write + Seek {}
 impl<T: Read + Write + Seek> RwSeek for T {}
 
 pub type IoHandle = Box<dyn RwSeek>;
+
+pub const IO_ERR: i32 = LIBCERROR_ERROR_DOMAINS_LIBCERROR_ERROR_DOMAIN_IO as i32;
+pub const ARGUMENT_ERR: i32 = LIBCERROR_ERROR_DOMAINS_LIBCERROR_ERROR_DOMAIN_ARGUMENTS as i32;
 
 #[no_mangle]
 pub unsafe extern "C" fn io_handle_free(
@@ -31,12 +36,26 @@ pub unsafe extern "C" fn io_handle_read(
     io_handle: IoHandleRefMut,
     buffer: *mut u8,
     size: usize,
-    _error: *mut LibbfioErrorRefMut,
+    error: *mut LibbfioErrorRefMut,
 ) -> isize {
     trace!("io_handle_read");
 
     let s = slice::from_raw_parts_mut(buffer, size);
-    (*io_handle).read(s).expect("read failed") as isize
+    match (*io_handle).read(s) {
+        Ok(cnt) => cnt as isize,
+        Err(e) => {
+            libcerror_error_set(
+                error as _,
+                IO_ERR,
+                LIBCERROR_IO_ERROR_LIBCERROR_IO_ERROR_READ_FAILED as i32,
+                CString::new("%s.").unwrap().into_raw(),
+                CString::new(format!("io_handle_read: {:?}", e))
+                    .unwrap()
+                    .into_raw(),
+            );
+            return -1;
+        }
+    }
 }
 
 #[no_mangle]
@@ -44,12 +63,26 @@ pub unsafe extern "C" fn io_handle_write(
     io_handle: IoHandleRefMut,
     buffer: *const u8,
     size: usize,
-    _error: *mut LibbfioErrorRefMut,
+    error: *mut LibbfioErrorRefMut,
 ) -> isize {
     trace!("io_handle_write");
 
     let s = slice::from_raw_parts(buffer, size);
-    (*io_handle).write(s).expect("write failed") as isize
+    match (*io_handle).write(s) {
+        Ok(cnt) => cnt as isize,
+        Err(e) => {
+            libcerror_error_set(
+                error as _,
+                IO_ERR,
+                LIBCERROR_IO_ERROR_LIBCERROR_IO_ERROR_WRITE_FAILED as i32,
+                CString::new("%s.").unwrap().into_raw(),
+                CString::new(format!("io_handle_write: {:?}", e))
+                    .unwrap()
+                    .into_raw(),
+            );
+            return -1;
+        }
+    }
 }
 
 #[no_mangle]
@@ -57,7 +90,7 @@ pub unsafe extern "C" fn io_handle_seek(
     io_handle: IoHandleRefMut,
     offset: u64,
     whence: c_int,
-    _error: *mut LibbfioErrorRefMut,
+    error: *mut LibbfioErrorRefMut,
 ) -> u64 {
     trace!("io_handle_seek");
 
@@ -65,20 +98,58 @@ pub unsafe extern "C" fn io_handle_seek(
         SEEK_SET => SeekFrom::Start(offset),
         SEEK_END => SeekFrom::End(offset as i64),
         SEEK_CUR => SeekFrom::Current(offset as i64),
-        _ => panic!("unexpected `whence`"),
+        _ => {
+            libcerror_error_set(
+                error as _,
+                ARGUMENT_ERR,
+                LIBCERROR_ARGUMENT_ERROR_LIBCERROR_ARGUMENT_ERROR_INVALID_VALUE as i32,
+                CString::new("%s: invalid whence.").unwrap().into_raw(),
+                CString::new("io_handle_seek").unwrap().into_raw(),
+            );
+            return 0;
+        }
     };
 
-    (*io_handle).seek(seek_from).expect("Seek failed")
+    match (*io_handle).seek(seek_from) {
+        Ok(count) => count,
+        Err(e) => {
+            libcerror_error_set(
+                error as _,
+                IO_ERR,
+                LIBCERROR_IO_ERROR_LIBCERROR_IO_ERROR_SEEK_FAILED as i32,
+                CString::new("%s.").unwrap().into_raw(),
+                CString::new(format!("io_handle_seek: {:?}", e))
+                    .unwrap()
+                    .into_raw(),
+            );
+            return 0;
+        }
+    }
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn io_handle_get_size(
     io_handle: IoHandleRefMut,
     size: *mut size64_t,
-    _error: *mut LibbfioErrorRefMut,
+    error: *mut LibbfioErrorRefMut,
 ) -> c_int {
     trace!("io_handle_get_size");
-    *size = (*io_handle).stream_len().expect("get size failed");
-
-    1
+    match (*io_handle).stream_len() {
+        Ok(count) => {
+            *size = count;
+            return 1;
+        }
+        Err(e) => {
+            libcerror_error_set(
+                error as _,
+                IO_ERR,
+                LIBCERROR_IO_ERROR_LIBCERROR_IO_ERROR_SEEK_FAILED as i32,
+                CString::new("%s.").unwrap().into_raw(),
+                CString::new(format!("io_handle_get_size: {:?}", e))
+                    .unwrap()
+                    .into_raw(),
+            );
+            return 0;
+        }
+    }
 }

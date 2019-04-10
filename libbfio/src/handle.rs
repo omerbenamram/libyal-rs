@@ -506,7 +506,8 @@ mod tests {
         let mut buf = vec![];
         new.read_to_end(&mut buf).unwrap();
 
-        assert_eq!(buf, FILE_CONTENT);
+        // b"Hellodata"
+        assert_eq!(buf, &[72, 101, 108, 108, 111, 100, 97, 116, 97]);
     }
 
     #[test]
@@ -516,11 +517,9 @@ mod tests {
         let test_file_path = tmp_dir.path().join(test_file).canonicalize().unwrap();
 
         let mut handle = Handle::open_file(&test_file_path, LibbfioAccessFlags::Read).unwrap();
-
         assert!(handle.write(b"Hello").is_err());
     }
-
-
+    
     #[test]
     fn test_seek() {
         let tmp_dir = tmp_src_dir();
