@@ -19,11 +19,11 @@ bindgen = "*"
 cc = "*"
 encoding_rs = "*"
 encoding_rs_io = "*"
+walkdir = "*"
 
 [features]
 
 default = []
 
-# Use when building static bindings
-# it's possible to define LIBBFIO_STATIC_LIBPATH to build against local checkout of the library.
-static_link = []
+# Use when building dynamic bindings.
+dynamic_link = []

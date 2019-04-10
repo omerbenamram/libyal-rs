@@ -83,8 +83,7 @@ fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
 /// Return the "include" folder for the library (to be used by bindgen).
 #[cfg(target_os = "windows")]
 fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
-    let python_exec =
-        env::var("PYTHON_SYS_EXECUTABLE ").unwrap_or_else(|_| "python.exe".to_owned());
+    let python_exec = env::var("PYTHON_SYS_EXECUTABLE").unwrap_or_else(|_| "python.exe".to_owned());
 
     Command::new("powershell")
         .arg("-File")
@@ -104,7 +103,7 @@ fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
         .status()
         .expect("autogen failed");
 
-    // The folder might not exists, but we don't care.
+    // The folder might not exists from a previous build, but we don't care.
     let _ = std::fs::remove_dir_all(&lib_path.join("vs2015"));
 
     let lib_name = lib_path.file_name().unwrap().to_string_lossy().into_owned();
@@ -120,7 +119,10 @@ fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
         .stderr(Stdio::inherit())
         .stdout(Stdio::inherit())
         .status()
-        .expect("Converting the solution failed. You might need to set PYTHON_SYS_EXECUTABLE to a working python interpreter");
+        .expect(
+            "Converting the solution failed. \
+             Python (2 or 3) is required. You might need to set PYTHON_SYS_EXECUTABLE",
+        );
 
     let target = env::var("TARGET").unwrap();
 
@@ -135,7 +137,7 @@ fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
 
     msbuild
         .arg(format!("vs2015\\{}.sln", lib_name))
-        .arg("/property:PlatformToolset=v141")
+        .arg("/p:PlatformToolset=v141")
         .arg(format!("/p:Platform={}", msbuild_platform))
         .current_dir(&lib_path)
         .stderr(Stdio::inherit())
@@ -159,21 +161,27 @@ fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
         build_dir.to_string_lossy()
     );
 
-    let include_folder_path = lib_path.join("include");
-
-    // h files created by autogen.ps1 are UTF16LE encoded, which llvm (and therefore bindgen) will not accept.
+    // h files created by autogen.ps1 (`.in.h` -> `.h`) are UTF16LE encoded,
+    // which llvm (and therefore bindgen) does not accept.
     // So convert them back to UTF8.
-    let lib_h_file = include_folder_path.join(format!("{}.h", lib_name));
-    utf16le_to_utf8(&lib_h_file).unwrap();
+    let autogen_dirs: Vec<PathBuf> = ["common", "include", &lib_name].into_iter().map(|dir_name| lib_path.join(dir_name)).collect();
+    let autogen_dirs_walk = autogen_dirs.iter().map(walkdir::WalkDir::new).flatten();
 
-    let types_h_file = lib_path.join("common").join("types.h");
-    utf16le_to_utf8(&types_h_file).unwrap();
+    for file_entry in autogen_dirs_walk {
+        let file_entry = file_entry.unwrap();
+        let file_path = file_entry.path();
+        let file_name = file_path.file_name().unwrap().to_string_lossy();
 
-    for file in ["definitions.h", "features.h", "types.h"].iter() {
-        let file_path = include_folder_path.join(&lib_name).join(file);
+        if !file_name.ends_with(".h.in") {
+            continue;
+        }
 
-        utf16le_to_utf8(&file_path).unwrap();
+        let h_file_path = file_path.with_file_name(file_name.replace(".h.in", ".h"));
+
+        utf16le_to_utf8(&h_file_path).unwrap();
     }
+
+    let include_folder_path = lib_path.join("include");
 
     include_folder_path
 }
@@ -199,7 +207,7 @@ fn utf16le_to_utf8(file_path: &PathBuf) -> Result<(), Error> {
 }
 
 fn build_and_link_static() -> PathBuf {
-    let libbfio = if let Ok(local_install) = env::var("LIBBFIO_STATIC_LIBPATH") {
+    let libbfio = if let Ok(local_install) = env::var("LIBBFIO_LIBPATH") {
         PathBuf::from(local_install)
     } else {
         env::current_dir().unwrap().join("libbfio")
@@ -220,7 +228,7 @@ fn build_and_link_static() -> PathBuf {
 }
 
 fn build_and_link_dynamic() -> PathBuf {
-    let libbfio = if let Ok(local_install) = env::var("LIBBFIO_DYNAMIC_LIBPATH") {
+    let libbfio = if let Ok(local_install) = env::var("LIBBFIO_LIBPATH") {
         PathBuf::from(local_install)
     } else {
         env::current_dir().unwrap().join("libbfio")
@@ -236,12 +244,12 @@ fn build_and_link_dynamic() -> PathBuf {
 }
 
 fn main() {
-    let include_folder_path = if cfg!(feature = "static_link") {
-        println!("Building static bindings");
-        build_and_link_static()
-    } else {
+    let include_folder_path = if cfg!(feature = "dynamic_link") {
         println!("Building dynamic bindings");
         build_and_link_dynamic()
+    } else {
+        println!("Building static bindings");
+        build_and_link_static()
     };
 
     // The bindgen::Builder is the main entry point

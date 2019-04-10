@@ -140,7 +140,7 @@ fn main() {
         .write_to_file(out_path.join("bindings.rs"))
         .expect("Couldn't write bindings!");
 
-    if cfg!(feature = "static_link") {
+    if cfg!(feature = "dynamic_link") {
         println!("Building static bindings");
         return build_static();
     } else {
