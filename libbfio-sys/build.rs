@@ -1,6 +1,6 @@
 use failure::{bail, Error};
 use fs_extra::dir::{copy, CopyOptions};
-use libyal_rs_common_build::{build_lib, generate_bindings};
+use libyal_rs_common_build::{sync_and_build_lib, generate_bindings};
 use std::env;
 use std::path::PathBuf;
 
@@ -27,7 +27,7 @@ fn build_and_link_static() -> PathBuf {
         println!("cargo:rustc-link-lib=static=bfio");
     }
 
-    build_lib(out_path, false)
+    sync_and_build_lib(out_path, false)
 }
 
 fn build_and_link_dynamic() -> PathBuf {
@@ -38,6 +38,7 @@ fn build_and_link_dynamic() -> PathBuf {
     };
 
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap()).join("libbfio");
+    let _ = std::fs::remove_dir_all(&out_path);
 
     copy(libbfio, &out_path.parent().unwrap(), &CopyOptions::new())
         .expect("Error while copying sources to `OUT_DIR`");
@@ -48,13 +49,10 @@ fn build_and_link_dynamic() -> PathBuf {
         println!("cargo:rustc-link-lib=dylib=bfio");
     }
 
-    build_lib(out_path, true)
+    sync_and_build_lib(out_path, true)
 }
 
 fn main() {
-    // We ignore changes to the C library because it is always changed by the build process.
-    println!("cargo:rerun-if-changed=src");
-
     let include_folder_path = if cfg!(feature = "dynamic_link") {
         build_and_link_dynamic()
     } else {

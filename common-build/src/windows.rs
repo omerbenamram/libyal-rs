@@ -28,8 +28,6 @@ pub fn sync_libs(lib_path: &PathBuf) {
 pub fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
     let python_exec = env::var("PYTHON_SYS_EXECUTABLE").unwrap_or_else(|_| "python.exe".to_owned());
 
-    sync_libs(&lib_path);
-
     Command::new("powershell")
         .arg("-File")
         .arg("autogen.ps1")
@@ -41,6 +39,8 @@ pub fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
 
     // The folder might not exists from a previous build, but we don't care.
     let _ = remove_dir_all(&lib_path.join("vs2015"));
+
+    panic!(format!("{:?}", env::var("CARGO_MANIFEST_DIR")));
 
     let lib_name = lib_path.file_name().unwrap().to_string_lossy().into_owned();
 

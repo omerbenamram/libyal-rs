@@ -11,8 +11,8 @@ edition = "2018"
 
 [build-dependencies]
 failure = "0.1.5"
-libyal-rs-common-build = "0.2.0"
 fs_extra = "1.1.0"
+libyal-rs-common-build = { path = "../common-build", version = "0.2.0" }
 
 [features]
 

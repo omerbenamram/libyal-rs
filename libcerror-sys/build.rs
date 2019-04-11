@@ -1,6 +1,6 @@
 use failure::{bail, Error};
 use fs_extra::dir::{copy, CopyOptions};
-use libyal_rs_common_build::{build_lib, generate_bindings};
+use libyal_rs_common_build::{sync_and_build_lib, generate_bindings};
 use std::env;
 use std::path::PathBuf;
 
@@ -22,7 +22,7 @@ fn build_and_link_static() -> PathBuf {
         println!("cargo:rustc-link-lib=static=cerror");
     }
 
-    build_lib(out_path, false)
+    sync_and_build_lib(out_path, false)
 }
 
 fn build_and_link_dynamic() -> PathBuf {
@@ -33,6 +33,7 @@ fn build_and_link_dynamic() -> PathBuf {
     };
 
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap()).join("libcerror");
+    let _ = std::fs::remove_dir_all(&out_path);
 
     copy(libcerror, &out_path.parent().unwrap(), &CopyOptions::new())
         .expect("Error while copying sources to `OUT_DIR`");
@@ -43,7 +44,7 @@ fn build_and_link_dynamic() -> PathBuf {
         println!("cargo:rustc-link-lib=dylib=cerror");
     }
 
-    build_lib(out_path, true)
+    sync_and_build_lib(out_path, true)
 }
 
 fn main() {

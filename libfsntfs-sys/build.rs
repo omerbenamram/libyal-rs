@@ -60,6 +60,7 @@ fn build_and_link_dynamic() -> PathBuf {
     };
 
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap()).join("libfsntfs");
+    let _ = std::fs::remove_dir_all(&out_path);
 
     copy(libfsntfs, &out_path.parent().unwrap(), &CopyOptions::new())
         .expect("Error while copying sources to `OUT_DIR`");
@@ -97,9 +98,6 @@ fn build_and_link_dynamic() -> PathBuf {
 }
 
 fn main() {
-    // We ignore changes to the C library because it is always changed by the build process.
-    println!("cargo:rerun-if-changed=src");
-
     let include_folder_path = if cfg!(feature = "dynamic_link") {
         build_and_link_dynamic()
     } else {
