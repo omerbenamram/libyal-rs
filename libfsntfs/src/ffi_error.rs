@@ -77,7 +77,7 @@ impl TryFrom<*mut __LibfsntfsError> for Error {
         let mut buffer = vec![0; 1024];
 
         let retcode =
-            unsafe { libfsntfs_error_sprint(err as *const _, buffer.as_mut_ptr(), buffer.len()) };
+            unsafe { libfsntfs_error_backtrace_sprint(err as *const _, buffer.as_mut_ptr(), buffer.len()) };
 
         if retcode == -1 {
             Err(Error::FFI("Failed to print error".to_owned()))

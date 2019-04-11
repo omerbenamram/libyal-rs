@@ -397,13 +397,13 @@ impl<'a> Iterator for IterAttributes<'a> {
     }
 }
 
-pub struct IterSubEntries<'a> {
-    handle: &'a FileEntry<'a>,
+pub struct IterSubEntries<'a: 'b, 'b> {
+    handle: &'b FileEntry<'a>,
     num_sub_entries: u32,
     idx: u32,
 }
 
-impl<'a> Iterator for IterSubEntries<'a> {
+impl<'a: 'b, 'b> Iterator for IterSubEntries<'a, 'b> {
     type Item = Result<FileEntry<'a>, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -535,7 +535,7 @@ impl<'a> FileEntry<'a> {
         })
     }
 
-    pub fn iter_sub_entries(&self) -> Result<IterSubEntries, Error> {
+    pub fn iter_sub_entries<'c>(&'c self) -> Result<IterSubEntries<'a, 'c>, Error> {
         let number_sub_entries = self.get_number_of_sub_file_entries()? as u32;
 
         Ok(IterSubEntries {
@@ -590,7 +590,7 @@ impl<'a> FileEntry<'a> {
         )
     }
 
-    pub fn get_sub_file_entry(&self, sub_file_entry_index: i32) -> Result<FileEntry, Error> {
+    pub fn get_sub_file_entry(&self, sub_file_entry_index: i32) -> Result<FileEntry<'a>, Error> {
         let mut sub_entry = ptr::null_mut();
         let mut error = ptr::null_mut();
 
@@ -645,6 +645,24 @@ impl<'a> FileEntry<'a> {
         }
     }
 
+    pub fn get_file_reference(&self) -> Result<u64, Error> {
+        let mut file_idx = 0;
+        let mut error = ptr::null_mut();
+
+        if unsafe {
+            libfsntfs_file_entry_get_file_reference(
+                self.as_type_ref(),
+                &mut file_idx,
+                &mut error,
+            )
+        } != 1
+        {
+            Err(Error::try_from(error)?)
+        } else {
+            Ok(file_idx)
+        }
+    }
+
     pub fn get_base_record_file_reference(&self) {
         unimplemented!();
     }
@@ -670,10 +688,6 @@ impl<'a> FileEntry<'a> {
     }
 
     pub fn get_file_attribute_flags(&self) {
-        unimplemented!();
-    }
-
-    pub fn get_file_reference(&self) {
         unimplemented!();
     }
 

@@ -3,9 +3,9 @@ use libbfio_sys::FILE;
 use libyal_rs_common::ffi::AsTypeRef;
 use log::trace;
 use std::convert::TryFrom;
-use std::ffi::{c_void, CStr};
-use std::fmt::{self, Display, Formatter};
-use std::mem;
+use std::ffi::{CStr};
+
+
 
 #[repr(C)]
 pub struct __LibbfioError(isize);
