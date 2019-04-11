@@ -1,5 +1,6 @@
 use failure::{bail, Error};
 use libyal_rs_common_build::{build_lib, generate_bindings};
+use fs_extra::dir::{copy, CopyOptions};
 use std::env;
 use std::path::PathBuf;
 
@@ -9,6 +10,11 @@ fn build_and_link_static() -> PathBuf {
     } else {
         env::current_dir().unwrap().join("libfsntfs")
     };
+
+    let out_path = PathBuf::from(env::var("OUT_DIR").unwrap()).join("libfsntfs");
+
+    copy(libfsntfs, &out_path.parent().unwrap(), &CopyOptions::new())
+        .expect("Error while copying sources to `OUT_DIR`");
 
     if cfg!(target_os = "windows") {
         println!("cargo:rustc-link-lib=static=libfsntfs");
@@ -40,7 +46,7 @@ fn build_and_link_static() -> PathBuf {
         println!("cargo:rustc-link-lib=static=fsntfs");
     }
 
-    build_lib(libfsntfs, false)
+    build_lib(out_path, false)
 }
 
 fn build_and_link_dynamic() -> PathBuf {
@@ -50,13 +56,18 @@ fn build_and_link_dynamic() -> PathBuf {
         env::current_dir().unwrap().join("libfsntfs")
     };
 
+    let out_path = PathBuf::from(env::var("OUT_DIR").unwrap()).join("libfsntfs");
+
+    copy(libfsntfs, &out_path.parent().unwrap(), &CopyOptions::new())
+        .expect("Error while copying sources to `OUT_DIR`");
+
     if cfg!(target_os = "windows") {
         println!("cargo:rustc-link-lib=dylib=libfsntfs");
     } else {
         println!("cargo:rustc-link-lib=dylib=fsntfs");
     }
 
-    build_lib(libfsntfs, true)
+    build_lib(out_path, true)
 }
 
 fn main() {
