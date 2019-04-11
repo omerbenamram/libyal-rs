@@ -12,6 +12,7 @@ pub use crate::windows::{build_lib, sync_libs};
 
 use std::env;
 use std::path::PathBuf;
+use fs_extra::dir::{copy, CopyOptions};
 
 /// Sync dependencies and build the lib.
 /// See `build_lib` for more.
@@ -19,6 +20,26 @@ pub fn sync_and_build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
     sync_libs(&lib_path);
 
     build_lib(lib_path, shared)
+}
+
+/// Find the library (based on env var or using the local submodule),
+/// copy it to the output folder and return the copied folder's path.
+pub fn get_lib_and_copy_to_out_dir(lib_name: &str) -> PathBuf {
+    let lib_path =
+        if let Ok(local_install) = env::var(format!("{}_LIBPATH", lib_name.to_uppercase())) {
+            PathBuf::from(local_install)
+        } else {
+            // For each `-sys` package, we expect the lib to be next to the Cargo.toml file.
+            PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap()).join(lib_name)
+        };
+
+    let out_path = PathBuf::from(env::var("OUT_DIR").unwrap()).join(lib_name);
+    let _ = std::fs::remove_dir_all(&out_path);
+
+    copy(&lib_path, &out_path.parent().unwrap(), &CopyOptions::new())
+        .expect(&format!("Error while copying sources from {:?} to `OUT_DIR`", &lib_path));
+
+    out_path
 }
 
 pub fn generate_bindings(include_folder_path: &PathBuf, header_file_name: &str) {

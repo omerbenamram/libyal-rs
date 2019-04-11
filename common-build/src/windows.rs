@@ -10,6 +10,8 @@ use walkdir::WalkDir;
 
 /// Synchronizes the local library dependencies.
 pub fn sync_libs(lib_path: &PathBuf) {
+    panic!("{:?}", lib_path);
+
     Command::new("powershell")
         .arg("-File")
         .arg("synclibs.ps1")
