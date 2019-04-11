@@ -7,7 +7,7 @@ edition = "2018"
 [dependencies]
 libbfio-sys = {path = "../libbfio-sys"}
 libyal-rs-common = "0.2.0"
-libcerror-sys = {path = "../libcerror-sys"}
+libcerror-sys = "0.2.0"
 chrono = "0.4.6"
 time = "0.1.42"
 log = "0.4.6"

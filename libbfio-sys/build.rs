@@ -1,4 +1,5 @@
 use failure::{bail, Error};
+use fs_extra::dir::{copy, CopyOptions};
 use libyal_rs_common_build::{build_lib, generate_bindings};
 use std::env;
 use std::path::PathBuf;
@@ -9,6 +10,11 @@ fn build_and_link_static() -> PathBuf {
     } else {
         env::current_dir().unwrap().join("libbfio")
     };
+
+    let out_path = PathBuf::from(env::var("OUT_DIR").unwrap()).join("libbfio");
+
+    copy(libbfio, &out_path.parent().unwrap(), &CopyOptions::new())
+        .expect("Error while copying sources to `OUT_DIR`");
 
     if cfg!(target_os = "windows") {
         println!("cargo:rustc-link-lib=static=libbfio");
@@ -21,7 +27,7 @@ fn build_and_link_static() -> PathBuf {
         println!("cargo:rustc-link-lib=static=bfio");
     }
 
-    build_lib(libbfio, false)
+    build_lib(out_path, false)
 }
 
 fn build_and_link_dynamic() -> PathBuf {
@@ -31,13 +37,18 @@ fn build_and_link_dynamic() -> PathBuf {
         env::current_dir().unwrap().join("libbfio")
     };
 
+    let out_path = PathBuf::from(env::var("OUT_DIR").unwrap()).join("libbfio");
+
+    copy(libbfio, &out_path.parent().unwrap(), &CopyOptions::new())
+        .expect("Error while copying sources to `OUT_DIR`");
+
     if cfg!(target_os = "windows") {
         println!("cargo:rustc-link-lib=dylib=libbfio");
     } else {
         println!("cargo:rustc-link-lib=dylib=bfio");
     }
 
-    build_lib(libbfio, true)
+    build_lib(out_path, true)
 }
 
 fn main() {
