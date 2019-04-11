@@ -13,7 +13,7 @@ fn build_and_link_static() -> PathBuf {
 
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap()).join("libbfio");
 
-    copy(libbfio, &out_path.parent().unwrap(), &CopyOptions::new())
+    copy(&libbfio, &out_path.parent().unwrap(), &CopyOptions::new())
         .expect("Error while copying sources to `OUT_DIR`");
 
     if cfg!(target_os = "windows") {
@@ -40,7 +40,7 @@ fn build_and_link_dynamic() -> PathBuf {
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap()).join("libbfio");
     let _ = std::fs::remove_dir_all(&out_path);
 
-    copy(libbfio, &out_path.parent().unwrap(), &CopyOptions::new())
+    copy(&libbfio, &out_path.parent().unwrap(), &CopyOptions::new())
         .expect("Error while copying sources to `OUT_DIR`");
 
     if cfg!(target_os = "windows") {

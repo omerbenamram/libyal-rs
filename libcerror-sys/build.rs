@@ -13,7 +13,7 @@ fn build_and_link_static() -> PathBuf {
 
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap()).join("libcerror");
 
-    copy(libcerror, &out_path.parent().unwrap(), &CopyOptions::new())
+    copy(&libcerror, &out_path.parent().unwrap(), &CopyOptions::new())
         .expect("Error while copying sources to `OUT_DIR`");
 
     if cfg!(target_os = "windows") {
@@ -35,7 +35,7 @@ fn build_and_link_dynamic() -> PathBuf {
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap()).join("libcerror");
     let _ = std::fs::remove_dir_all(&out_path);
 
-    copy(libcerror, &out_path.parent().unwrap(), &CopyOptions::new())
+    copy(&libcerror, &out_path.parent().unwrap(), &CopyOptions::new())
         .expect("Error while copying sources to `OUT_DIR`");
 
     if cfg!(target_os = "windows") {
