@@ -1,5 +1,10 @@
 [package]
 name = "libbfio-rs"
+description = "Rust bindings for libbfio (https://github.com/libyal/libbfio)"
+homepage = "https://github.com/omerbenamram/libyal-rs"
+repository = "https://github.com/omerbenamram/libyal-rs"
+license = "LGPL-3.0+"
+
 version = "0.2.0"
 authors = ["Omer Ben-Amram <omerbenamram@gmail.com>"]
 edition = "2018"
