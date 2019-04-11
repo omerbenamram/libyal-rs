@@ -1,4 +1,5 @@
 use failure::{bail, Error};
+use fs_extra::dir::{copy, CopyOptions};
 use libyal_rs_common_build::{build_lib, generate_bindings};
 use std::env;
 use std::path::PathBuf;
@@ -10,13 +11,18 @@ fn build_and_link_static() -> PathBuf {
         env::current_dir().unwrap().join("libcerror")
     };
 
+    let out_path = PathBuf::from(env::var("OUT_DIR").unwrap()).join("libcerror");
+
+    copy(libcerror, &out_path.parent().unwrap(), &CopyOptions::new())
+        .expect("Error while copying sources to `OUT_DIR`");
+
     if cfg!(target_os = "windows") {
         println!("cargo:rustc-link-lib=static=libcerror");
     } else {
         println!("cargo:rustc-link-lib=static=cerror");
     }
 
-    build_lib(libcerror, false)
+    build_lib(out_path, false)
 }
 
 fn build_and_link_dynamic() -> PathBuf {
@@ -26,19 +32,21 @@ fn build_and_link_dynamic() -> PathBuf {
         env::current_dir().unwrap().join("libcerror")
     };
 
+    let out_path = PathBuf::from(env::var("OUT_DIR").unwrap()).join("libcerror");
+
+    copy(libcerror, &out_path.parent().unwrap(), &CopyOptions::new())
+        .expect("Error while copying sources to `OUT_DIR`");
+
     if cfg!(target_os = "windows") {
         println!("cargo:rustc-link-lib=dylib=libcerror");
     } else {
         println!("cargo:rustc-link-lib=dylib=cerror");
     }
 
-    build_lib(libcerror, true)
+    build_lib(out_path, true)
 }
 
 fn main() {
-    // We ignore changes to the C library because it is always changed by the build process.
-    println!("cargo:rerun-if-changed=src");
-
     let include_folder_path = if cfg!(feature = "dynamic_link") {
         build_and_link_dynamic()
     } else {
