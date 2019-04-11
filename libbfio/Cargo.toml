@@ -11,7 +11,7 @@ edition = "2018"
 
 [dependencies]
 libbfio-sys = { path = "../libbfio-sys", version = "0.2.0" }
-libyal-rs-common = { path = "../common", version = "0.2.0" }
+libyal-rs-common = { path = "../common", version = "0.2.1" }
 libcerror-sys = { path = "../libcerror-sys", version = "0.2.0" }
 chrono = "0.4.6"
 time = "0.1.42"

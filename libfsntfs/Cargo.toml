@@ -14,7 +14,7 @@ edition = "2018"
 [dependencies]
 libfsntfs-sys = { path = "../libfsntfs-sys" , version = "0.2.0" }
 libbfio-rs = { path = "../libbfio" , version = "0.2.0" }
-libyal-rs-common = { path = "../common" , version = "0.2.0" }
+libyal-rs-common = { path = "../common" , version = "0.2.1" }
 chrono = "0.4.6"
 time = "0.1.42"
 log = "0.4.6"
