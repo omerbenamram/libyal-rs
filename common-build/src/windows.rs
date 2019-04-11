@@ -10,8 +10,6 @@ use walkdir::WalkDir;
 
 /// Synchronizes the local library dependencies.
 pub fn sync_libs(lib_path: &PathBuf) {
-    panic!("{:?}", lib_path);
-
     Command::new("powershell")
         .arg("-File")
         .arg("synclibs.ps1")
@@ -42,18 +40,18 @@ pub fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
     // The folder might not exists from a previous build, but we don't care.
     let _ = remove_dir_all(&lib_path.join("vs2015"));
 
-    panic!(format!("{:?}", env::var("CARGO_MANIFEST_DIR")));
+    let vstools_path = PathBuf::from(file!()).parent().unwrap().parent().unwrap().parent().unwrap().join("vstools");
 
     let lib_name = lib_path.file_name().unwrap().to_string_lossy().into_owned();
 
     let py_convert_status = Command::new(&python_exec)
-        .arg("..\\..\\vstools\\scripts\\msvscpp-convert.py")
+        .arg(vstools_path.join("scripts").join("msvscpp-convert.py"))
         .arg("--extend-with-x64")
         .arg("--output-format")
         .arg("2015")
         .arg(format!("msvscpp\\{}.sln", lib_name))
         .current_dir(&lib_path)
-        .env("PYTHONPATH", "..\\..\\vstools")
+        .env("PYTHONPATH", vstools_path.into_os_string())
         .stderr(Stdio::inherit())
         .stdout(Stdio::inherit())
         .status();
