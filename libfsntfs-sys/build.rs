@@ -35,7 +35,6 @@ fn build_and_link_static(lib_path: PathBuf) -> PathBuf {
     } else {
         println!("cargo:rustc-link-lib=static=fsntfs");
     }
-    sync_libs(&lib_path);
 
     build_lib(lib_path, false)
 }
@@ -47,10 +46,16 @@ fn build_and_link_dynamic(lib_path: PathBuf) -> PathBuf {
         println!("cargo:rustc-link-lib=dylib=fsntfs");
     }
 
+    build_lib(lib_path, true)
+}
+
+fn main() {
+    let lib_path = get_lib_and_copy_to_out_dir("libfsntfs");
+
     sync_libs(&lib_path);
 
-    // Patch libcache to fix a segfault (See https://github.com/libyal/libfsntfs/issues/10).
-    let patched_file_path = lib_path.join("libcache").join("libfcache_cache_value.c");
+    // Patch libfcache to fix a segfault (See https://github.com/libyal/libfsntfs/issues/10).
+    let patched_file_path = lib_path.join("libfcache").join("libfcache_cache_value.c");
     let mut org_file_content = String::new();
 
     File::open(&patched_file_path)
@@ -59,8 +64,8 @@ fn build_and_link_dynamic(lib_path: PathBuf) -> PathBuf {
         .unwrap();
 
     let patched_file_lines: Vec<&str> = org_file_content.lines().enumerate()
-        .filter(|(line_idx, line)| (line_idx + 1 < 477) && (489 < line_idx +1) )
-        .map(|(line_idx, line)| line)
+        .filter(|(line_idx, _line)| (line_idx + 1 < 477) || (489 < line_idx +1) )
+        .map(|(_line_idx, line)| line)
         .collect();
 
     let patched_file_content = patched_file_lines.join("\n");
@@ -69,12 +74,6 @@ fn build_and_link_dynamic(lib_path: PathBuf) -> PathBuf {
         .unwrap()
         .write_all(&patched_file_content.as_bytes())
         .unwrap();
-
-    build_lib(lib_path, true)
-}
-
-fn main() {
-    let lib_path = get_lib_and_copy_to_out_dir("libfsntfs");
 
     let include_folder_path = if cfg!(feature = "dynamic_link") {
         build_and_link_dynamic(lib_path)
