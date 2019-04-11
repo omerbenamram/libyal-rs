@@ -44,7 +44,7 @@ pub fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
     // The folder might not exists from a previous build, but we don't care.
     let _ = remove_dir_all(&lib_path.join("vs2015"));
 
-    let vstools_path = PathBuf::from(file!()).parent().unwrap().parent().unwrap().parent().unwrap().join("vstools");
+    let vstools_path = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap()).parent().unwrap().join("vstools");
 
     let lib_name = lib_path.file_name().unwrap().to_string_lossy().into_owned();
 
