@@ -2,16 +2,24 @@
 mod posix;
 
 #[cfg(not(target_os = "windows"))]
-pub use crate::posix::build_lib;
+pub use crate::posix::{build_lib, sync_libs};
 
 #[cfg(target_os = "windows")]
 mod windows;
 
 #[cfg(target_os = "windows")]
-pub use crate::windows::build_lib;
+pub use crate::windows::{build_lib, sync_libs};
 
 use std::env;
 use std::path::PathBuf;
+
+/// Sync dependencies and build the lib.
+/// See `build_lib` for more.
+pub fn sync_and_build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
+    sync_libs(&lib_path);
+
+    build_lib(lib_path, shared)
+}
 
 pub fn generate_bindings(include_folder_path: &PathBuf, header_file_name: &str) {
     // The bindgen::Builder is the main entry point

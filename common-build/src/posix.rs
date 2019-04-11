@@ -6,14 +6,8 @@ use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
-/// Build the lib on posix platforms (using configure and make).
-/// This function will also add the needed folder to the `link-search` path.
-/// Return the "include" folder for the library (to be used by bindgen).
-pub fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
-    let target = lib_path.join("dist");
-
-    println!("building with prefix={}", target.display());
-
+/// Synchronizes the local library dependencies.
+pub fn sync_libs(lib_path: &PathBuf) {
     Command::new("sh")
         .arg("synclibs.sh")
         .current_dir(&lib_path)
@@ -21,6 +15,14 @@ pub fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
         .stdout(Stdio::inherit())
         .status()
         .expect("synclibs failed");
+}
+
+/// Build the lib on posix platforms (using configure and make).
+/// Note, this function will not sync dependencies. use `sync_libs` or `sync_and_build_lib`.
+/// This function will also add the needed folder to the `link-search` path.
+/// Return the "include" folder for the library (to be used by bindgen).
+pub fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
+    let target = lib_path.join("dist");
 
     Command::new("sh")
         .arg("autogen.sh")

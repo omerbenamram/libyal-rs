@@ -1,7 +1,9 @@
 use failure::{bail, Error};
-use libyal_rs_common_build::{build_lib, generate_bindings};
 use fs_extra::dir::{copy, CopyOptions};
+use libyal_rs_common_build::{build_lib, generate_bindings, sync_libs};
 use std::env;
+use std::fs::File;
+use std::io::{Write, Read};
 use std::path::PathBuf;
 
 fn build_and_link_static() -> PathBuf {
@@ -45,6 +47,7 @@ fn build_and_link_static() -> PathBuf {
     } else {
         println!("cargo:rustc-link-lib=static=fsntfs");
     }
+    sync_libs(&libfsntfs);
 
     build_lib(out_path, false)
 }
@@ -67,7 +70,30 @@ fn build_and_link_dynamic() -> PathBuf {
         println!("cargo:rustc-link-lib=dylib=fsntfs");
     }
 
-    build_lib(out_path, true)
+    sync_libs(&out_path);
+
+    // Patch libcache to fix a segfault (See https://github.com/libyal/libfsntfs/issues/10).
+    let patched_file_path = out_path.join("libcache").join("libfcache_cache_value.c");
+    let mut org_file_content = String::new();
+
+    File::open(&patched_file_path)
+        .unwrap()
+        .read_to_string(&mut org_file_content)
+        .unwrap();
+
+    let patched_file_lines: Vec<&str> = org_file_content.lines().enumerate()
+        .filter(|(line_idx, line)| (line_idx + 1 < 477) && (489 < line_idx +1) )
+        .map(|(line_idx, line)| line)
+        .collect();
+
+    let patched_file_content = patched_file_lines.join("\n");
+
+    File::create(&patched_file_path)
+        .unwrap()
+        .write_all(&patched_file_content.as_bytes())
+        .unwrap();
+
+    build_lib(libfsntfs, true)
 }
 
 fn main() {

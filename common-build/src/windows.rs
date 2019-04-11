@@ -1,20 +1,15 @@
+use encoding_rs_io::DecodeReaderBytesBuilder;
 use failure::{bail, Error};
 use std::env;
-use std::fs::{File, remove_dir_all};
+use std::fs::{remove_dir_all, File};
 use std::io;
 use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use walkdir::WalkDir;
-use encoding_rs_io::DecodeReaderBytesBuilder;
 
-/// Build the lib on windows (using msbuild and libyal's vstools).
-/// Require python to be installed.
-/// This function will also add the needed folder to the `link-search` path.
-/// Return the "include" folder for the library (to be used by bindgen).
-pub fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
-    let python_exec = env::var("PYTHON_SYS_EXECUTABLE").unwrap_or_else(|_| "python.exe".to_owned());
-
+/// Synchronizes the local library dependencies.
+pub fn sync_libs(lib_path: &PathBuf) {
     Command::new("powershell")
         .arg("-File")
         .arg("synclibs.ps1")
@@ -23,6 +18,17 @@ pub fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
         .stdout(Stdio::inherit())
         .status()
         .expect("synclibs failed");
+}
+
+/// Build the lib on windows (using msbuild and libyal's vstools).
+/// Note, this function will not sync dependencies. use `sync_libs` or `sync_and_build_lib`.
+/// Require python to be installed.
+/// This function will also add the needed folder to the `link-search` path.
+/// Return the "include" folder for the library (to be used by bindgen).
+pub fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
+    let python_exec = env::var("PYTHON_SYS_EXECUTABLE").unwrap_or_else(|_| "python.exe".to_owned());
+
+    sync_libs(&lib_path);
 
     Command::new("powershell")
         .arg("-File")
