@@ -1,3 +1,8 @@
+//! Wraps libbfio `Handle` structure.
+//!
+//! The `Handle` abstracts over concrete implementation of a data IO handle.
+//! We use it to wrap a rust IO handle which in itself is a Boxed, dynamically dispatched IO source.
+//!
 use crate::error::Error;
 use crate::ffi_error::LibbfioErrorRefMut;
 use crate::io_handle::IoHandle;
@@ -7,6 +12,7 @@ use libyal_rs_common::ffi::AsTypeRef;
 use libbfio_sys::*;
 use std::convert::TryFrom;
 
+use crate::error::Error::FailedToOpenFile;
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::os::raw::c_int;
@@ -48,6 +54,7 @@ impl Handle {
     }
 }
 
+#[repr(C)]
 enum LibbfioIoHandleType {
     /* The IO handle is not managed by the library
      */
@@ -108,10 +115,7 @@ extern "C" {
             ) -> c_int,
         >,
         close: Option<
-            unsafe extern "C" fn(
-                io_handle: *mut IoHandle,
-                error: *mut LibbfioErrorRefMut,
-            ) -> c_int,
+            unsafe extern "C" fn(io_handle: *mut IoHandle, error: *mut LibbfioErrorRefMut) -> c_int,
         >,
         read: Option<
             unsafe extern "C" fn(
@@ -138,16 +142,10 @@ extern "C" {
             ) -> u64,
         >,
         exists: Option<
-            unsafe extern "C" fn(
-                io_handle: *mut IoHandle,
-                error: *mut LibbfioErrorRefMut,
-            ) -> c_int,
+            unsafe extern "C" fn(io_handle: *mut IoHandle, error: *mut LibbfioErrorRefMut) -> c_int,
         >,
         is_open: Option<
-            unsafe extern "C" fn(
-                io_handle: *mut IoHandle,
-                error: *mut LibbfioErrorRefMut,
-            ) -> c_int,
+            unsafe extern "C" fn(io_handle: *mut IoHandle, error: *mut LibbfioErrorRefMut) -> c_int,
         >,
         get_size: Option<
             unsafe extern "C" fn(
@@ -257,11 +255,9 @@ impl Handle {
         let mut handle = ptr::null_mut();
         let mut error = ptr::null_mut();
 
-        let io_handle = IoHandle {
-            inner: Box::new(f.expect("failed to open file")) as Box<dyn RwSeek>,
-            is_open: true,
-        };
+        let io_handle = IoHandle::file(f.map_err(|e| Error::FailedToOpenFile(e))?);
 
+        // Allocate the fat pointer on the heap, because passing it over ffi boundary is lossy.
         let heap_ptr = Box::into_raw(Box::new(io_handle));
 
         let retcode = unsafe {

@@ -14,10 +14,18 @@ use std::slice;
 pub trait RwSeek: Read + Write + Seek {}
 impl<T: Read + Write + Seek> RwSeek for T {}
 
-// TODO: after finializing structure, make a constructor
 pub struct IoHandle {
-    pub inner: Box<dyn RwSeek>,
-    pub is_open: bool,
+    inner: Box<dyn RwSeek>,
+    is_open: bool,
+}
+
+impl IoHandle {
+    pub fn file(inner: File) -> Self {
+        IoHandle {
+            inner: Box::new(inner) as Box<dyn RwSeek>,
+            is_open: true
+        }
+    }
 }
 
 pub const IO_ERR: i32 = LIBCERROR_ERROR_DOMAINS_LIBCERROR_ERROR_DOMAIN_IO as i32;
