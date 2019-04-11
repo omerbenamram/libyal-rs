@@ -4,7 +4,7 @@ use crate::io_handle::IoHandle;
 use crate::io_handle::*;
 use libyal_rs_common::ffi::AsTypeRef;
 
-use libbfio_sys::{size64_t, SEEK_CUR, SEEK_END, SEEK_SET};
+use libbfio_sys::*;
 use std::convert::TryFrom;
 
 use std::fs::{File, OpenOptions};
@@ -52,23 +52,15 @@ pub type IoHandleConstRef = *const IoHandle;
 pub type IoHandleRefMut = *mut IoHandle;
 pub type BoxedIoHandleRefMut = *mut *mut IoHandle;
 
-//enum LibbfioFlags {
-//    /* The IO handle is not managed by the library
-//     */
-//    IoHandleNonManaged = 0x00,
-//
-//    /* The IO handle is managed by the library
-//     */
-//    IoHandleManaged = 0x01,
-//
-//    /* The IO handle is cloned by the function
-//     */
-//    CloneByFunction = 0x00,
-//
-//    /* The IO handle is not cloned, but passed as a reference
-//     */
-//    CloneByReference = 0x02,
-//}
+enum LibbfioIoHandleType {
+    /* The IO handle is not managed by the library
+     */
+    IoHandleNonManaged = LIBBFIO_FLAGS_LIBBFIO_FLAG_IO_HANDLE_NON_MANAGED as isize,
+
+    /* The IO handle is managed by the library
+     */
+    IoHandleManaged = LIBBFIO_FLAGS_LIBBFIO_FLAG_IO_HANDLE_MANAGED as isize,
+}
 
 /* The access flags definitions
  * bit 1						set to 1 for read access
@@ -76,18 +68,21 @@ pub type BoxedIoHandleRefMut = *mut *mut IoHandle;
  * bit 3						set to 1 to truncate an existing file on write
  * bit 4-8						not used
  */
+#[repr(C)]
 pub enum LibbfioAccessFlags {
-    Read = 0x01,
-    Write = 0x02,
-    Truncate = 0x04,
+    Read = LIBBFIO_ACCESS_FLAGS_LIBBFIO_ACCESS_FLAG_READ as isize,
+    Write = LIBBFIO_ACCESS_FLAGS_LIBBFIO_ACCESS_FLAG_WRITE as isize,
+    Truncate = LIBBFIO_ACCESS_FLAGS_LIBBFIO_ACCESS_FLAG_TRUNCATE as isize,
 }
 
 impl LibbfioAccessFlags {
     pub fn to_int(&self) -> c_int {
         match self {
-            LibbfioAccessFlags::Read => 0x01,
-            LibbfioAccessFlags::Write => 0x02,
-            LibbfioAccessFlags::Truncate => 0x04,
+            LibbfioAccessFlags::Read => LIBBFIO_ACCESS_FLAGS_LIBBFIO_ACCESS_FLAG_READ as c_int,
+            LibbfioAccessFlags::Write => LIBBFIO_ACCESS_FLAGS_LIBBFIO_ACCESS_FLAG_WRITE as c_int,
+            LibbfioAccessFlags::Truncate => {
+                LIBBFIO_ACCESS_FLAGS_LIBBFIO_ACCESS_FLAG_TRUNCATE as c_int
+            }
         }
     }
 }
@@ -268,7 +263,7 @@ impl Handle {
 
         let io_handle = IoHandle {
             inner: Box::new(f.expect("failed to open file")) as Box<dyn RwSeek>,
-            is_open: true
+            is_open: true,
         };
 
         let heap_ptr = Box::into_raw(Box::new(io_handle));
@@ -287,8 +282,9 @@ impl Handle {
                 None,
                 Some(io_handle_is_open),
                 Some(io_handle_get_size),
-                // LibbfioFlagIoHandleManaged
-                1,
+                // This will ensure that the library will try to free our inner handle
+                // when it's done with it.
+                LibbfioIoHandleType::IoHandleManaged as u8,
                 &mut error,
             )
         };
