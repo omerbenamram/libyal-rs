@@ -545,7 +545,7 @@ name = "libbfio-sys"
 version = "0.1.3"
 dependencies = [
  "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "libyal-rs-common-build 0.2.0",
+ "libyal-rs-common-build 0.2.1-alpha.0",
 ]
 
 [[package]]
@@ -558,7 +558,7 @@ name = "libcerror-sys"
 version = "0.1.3"
 dependencies = [
  "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "libyal-rs-common-build 0.2.0",
+ "libyal-rs-common-build 0.2.1-alpha.0",
 ]
 
 [[package]]
@@ -584,7 +584,7 @@ name = "libfsntfs-sys"
 version = "0.1.3"
 dependencies = [
  "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "libyal-rs-common-build 0.2.0",
+ "libyal-rs-common-build 0.2.1-alpha.0",
 ]
 
 [[package]]
@@ -610,7 +610,7 @@ dependencies = [
 
 [[package]]
 name = "libyal-rs-common-build"
-version = "0.2.0"
+version = "0.2.1-alpha.0"
 dependencies = [
  "bindgen 0.49.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "cc 1.0.35 (registry+https://github.com/rust-lang/crates.io-index)",
