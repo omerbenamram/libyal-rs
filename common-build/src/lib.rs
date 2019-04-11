@@ -13,6 +13,9 @@ pub use crate::windows::{build_lib, sync_libs};
 use std::env;
 use std::path::PathBuf;
 use fs_extra::dir::{copy, CopyOptions};
+use rand::{thread_rng, Rng};
+use rand::distributions::Alphanumeric;
+use std::fs::create_dir;
 
 /// Sync dependencies and build the lib.
 /// See `build_lib` for more.
@@ -33,13 +36,25 @@ pub fn get_lib_and_copy_to_out_dir(lib_name: &str) -> PathBuf {
             PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap()).join(lib_name)
         };
 
-    let out_path = PathBuf::from(env::var("OUT_DIR").unwrap()).join(lib_name);
-    let _ = std::fs::remove_dir_all(&out_path);
+    let rand_folder_name: String = thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(6)
+        .collect();
 
-    copy(&lib_path, &out_path.parent().unwrap(), &CopyOptions::new())
+    let build_out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
+
+    // We have to use a random build dir because multiple builds of the same lib might happen at the same time.
+    let random_build_dir = build_out_dir.join(rand_folder_name);
+
+    create_dir(&random_build_dir).unwrap();
+
+    let copied_lib_path = random_build_dir.join(lib_name);
+    let _ = std::fs::remove_dir_all(&copied_lib_path);
+
+    copy(&lib_path, &copied_lib_path.parent().unwrap(), &CopyOptions::new())
         .expect(&format!("Error while copying sources from {:?} to `OUT_DIR`", &lib_path));
 
-    out_path
+    copied_lib_path
 }
 
 pub fn generate_bindings(include_folder_path: &PathBuf, header_file_name: &str) {
