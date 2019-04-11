@@ -3,7 +3,6 @@ use crate::ffi_error::LibbfioErrorRefMut;
 use libbfio_sys::{size64_t, SEEK_CUR, SEEK_END, SEEK_SET};
 use log::trace;
 
-use crate::handle::{BoxedIoHandleRefMut, IoHandleRefMut};
 use libcerror_sys::*;
 use std::ffi::CString;
 use std::fs::File;
@@ -26,7 +25,7 @@ pub const ARGUMENT_ERR: i32 = LIBCERROR_ERROR_DOMAINS_LIBCERROR_ERROR_DOMAIN_ARG
 
 #[no_mangle]
 pub unsafe extern "C" fn io_handle_free(
-    io_handle: BoxedIoHandleRefMut,
+    io_handle: *mut *mut IoHandle,
     _error: *mut LibbfioErrorRefMut,
 ) -> c_int {
     trace!("io_handle_free");
@@ -37,7 +36,7 @@ pub unsafe extern "C" fn io_handle_free(
 
 #[no_mangle]
 pub unsafe extern "C" fn io_handle_read(
-    io_handle: IoHandleRefMut,
+    io_handle: *mut IoHandle,
     buffer: *mut u8,
     size: usize,
     error: *mut LibbfioErrorRefMut,
@@ -64,7 +63,7 @@ pub unsafe extern "C" fn io_handle_read(
 
 #[no_mangle]
 pub unsafe extern "C" fn io_handle_write(
-    io_handle: IoHandleRefMut,
+    io_handle: *mut IoHandle,
     buffer: *const u8,
     size: usize,
     error: *mut LibbfioErrorRefMut,
@@ -91,7 +90,7 @@ pub unsafe extern "C" fn io_handle_write(
 
 #[no_mangle]
 pub unsafe extern "C" fn io_handle_is_open(
-    io_handle: IoHandleRefMut,
+    io_handle: *mut IoHandle,
     error: *mut LibbfioErrorRefMut,
 ) -> c_int {
     trace!("io_handle_is_open");
@@ -103,7 +102,7 @@ pub unsafe extern "C" fn io_handle_is_open(
 
 #[no_mangle]
 pub unsafe extern "C" fn io_handle_seek(
-    io_handle: IoHandleRefMut,
+    io_handle: *mut IoHandle,
     offset: u64,
     whence: c_int,
     error: *mut LibbfioErrorRefMut,
@@ -145,7 +144,7 @@ pub unsafe extern "C" fn io_handle_seek(
 
 #[no_mangle]
 pub unsafe extern "C" fn io_handle_get_size(
-    io_handle: IoHandleRefMut,
+    io_handle: *mut IoHandle,
     size: *mut size64_t,
     error: *mut LibbfioErrorRefMut,
 ) -> c_int {

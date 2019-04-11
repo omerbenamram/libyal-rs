@@ -48,10 +48,6 @@ impl Handle {
     }
 }
 
-pub type IoHandleConstRef = *const IoHandle;
-pub type IoHandleRefMut = *mut IoHandle;
-pub type BoxedIoHandleRefMut = *mut *mut IoHandle;
-
 enum LibbfioIoHandleType {
     /* The IO handle is not managed by the library
      */
@@ -90,36 +86,36 @@ impl LibbfioAccessFlags {
 extern "C" {
     pub fn libbfio_handle_initialize(
         handle: *mut HandleRefMut,
-        io_handle: IoHandleRefMut,
+        io_handle: *mut IoHandle,
         free_io_handle: Option<
             unsafe extern "C" fn(
-                io_handle: *mut IoHandleRefMut,
+                io_handle: *mut *mut IoHandle,
                 error: *mut LibbfioErrorRefMut,
             ) -> c_int,
         >,
         clone_io_handle: Option<
             unsafe extern "C" fn(
-                destination_io_handle: BoxedIoHandleRefMut,
-                source_io_handle: IoHandleRefMut,
+                destination_io_handle: *mut *mut IoHandle,
+                source_io_handle: *mut IoHandle,
                 error: *mut LibbfioErrorRefMut,
             ) -> c_int,
         >,
         open: Option<
             unsafe extern "C" fn(
-                io_handle: IoHandleRefMut,
+                io_handle: *mut IoHandle,
                 access_flags: c_int,
                 error: *mut LibbfioErrorRefMut,
             ) -> c_int,
         >,
         close: Option<
             unsafe extern "C" fn(
-                io_handle: IoHandleRefMut,
+                io_handle: *mut IoHandle,
                 error: *mut LibbfioErrorRefMut,
             ) -> c_int,
         >,
         read: Option<
             unsafe extern "C" fn(
-                io_handle: IoHandleRefMut,
+                io_handle: *mut IoHandle,
                 buffer: *mut u8,
                 size: usize,
                 error: *mut LibbfioErrorRefMut,
@@ -127,7 +123,7 @@ extern "C" {
         >,
         write: Option<
             unsafe extern "C" fn(
-                io_handle: IoHandleRefMut,
+                io_handle: *mut IoHandle,
                 buffer: *const u8,
                 size: usize,
                 error: *mut LibbfioErrorRefMut,
@@ -135,7 +131,7 @@ extern "C" {
         >,
         seek_offset: Option<
             unsafe extern "C" fn(
-                io_handle: IoHandleRefMut,
+                io_handle: *mut IoHandle,
                 offset: u64,
                 whence: c_int,
                 error: *mut LibbfioErrorRefMut,
@@ -143,19 +139,19 @@ extern "C" {
         >,
         exists: Option<
             unsafe extern "C" fn(
-                io_handle: IoHandleRefMut,
+                io_handle: *mut IoHandle,
                 error: *mut LibbfioErrorRefMut,
             ) -> c_int,
         >,
         is_open: Option<
             unsafe extern "C" fn(
-                io_handle: IoHandleRefMut,
+                io_handle: *mut IoHandle,
                 error: *mut LibbfioErrorRefMut,
             ) -> c_int,
         >,
         get_size: Option<
             unsafe extern "C" fn(
-                io_handle: IoHandleRefMut,
+                io_handle: *mut IoHandle,
                 size: *mut u64,
                 error: *mut LibbfioErrorRefMut,
             ) -> c_int,
