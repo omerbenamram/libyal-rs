@@ -3,7 +3,7 @@ name = "libyal-rs-common"
 description = "Internal utilities"
 license = "LGPL-3.0+"
 
-version = "0.2.0"
+version = "0.2.1-alpha.0"
 authors = ["Omer Ben-Amram <omerbenamram@gmail.com>"]
 edition = "2018"
 
