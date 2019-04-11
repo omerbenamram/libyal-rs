@@ -546,6 +546,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "libbfio-rs"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "chrono 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libbfio-sys 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libcerror-sys 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libyal-rs-common 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "time 0.1.42 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "libbfio-sys"
 version = "0.2.0"
 dependencies = [
@@ -588,8 +602,8 @@ dependencies = [
  "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "flate2 1.0.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "libbfio-rs 0.2.0",
- "libfsntfs-sys 0.2.0",
+ "libbfio-rs 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libfsntfs-sys 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libyal-rs-common 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "reqwest 0.9.13 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -600,6 +614,16 @@ dependencies = [
 [[package]]
 name = "libfsntfs-sys"
 version = "0.2.0"
+dependencies = [
+ "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "fs_extra 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libyal-rs-common-build 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "libfsntfs-sys"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "fs_extra 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1748,9 +1772,11 @@ dependencies = [
 "checksum kernel32-sys 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "7507624b29483431c0ba2d82aece8ca6cdba9382bff4ddd0f7490560c056098d"
 "checksum lazy_static 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "bc5729f27f159ddd61f4df6228e827e86643d4d3e7c32183cb30a1c08f604a14"
 "checksum lazycell 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "b294d6fa9ee409a054354afc4352b0b9ef7ca222c69b8812cbea9e7d2bf3783f"
+"checksum libbfio-rs 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "d6a47b049c0c2ce03b0a894ec07706ee2c6e076bc52eda7a63674772556e91c5"
 "checksum libbfio-sys 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "59deee6fd10a122534f15beac60038b298e837b175a328a780b92620767b9cc1"
 "checksum libc 0.2.51 (registry+https://github.com/rust-lang/crates.io-index)" = "bedcc7a809076656486ffe045abeeac163da1b558e963a31e29fbfbeba916917"
 "checksum libcerror-sys 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "3dcf67abc80b37aa229081ff9186860f7e2b006c7f2029535a11fabfef216155"
+"checksum libfsntfs-sys 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "ee5d3da5db315634a3328dabfef8faa27b5c0617868f37b4e380e6906337f15a"
 "checksum libloading 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)" = "9c3ad660d7cb8c5822cd83d10897b0f1f1526792737a179e73896152f85b88c2"
 "checksum libyal-rs-common 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "a6ceadcabee8d91925202db01cc395af05de9717a9735d0cf5f3b2f95073f4d1"
 "checksum libyal-rs-common-build 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "783f85d32ffb2e83fba5c0d139346fd019fc2c1a8b724972458f0e0877a7fe0f"
