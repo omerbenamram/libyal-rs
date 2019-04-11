@@ -1,8 +1,8 @@
 [package]
 name = "libbfio-sys"
 description = "Rust bindings for libbfio (https://github.com/libyal/libbfio)"
-homepage = "https://github.com/omerbenamram/libbfio-sys"
-repository = "https://github.com/omerbenamram/libbfio-sys"
+homepage = "https://github.com/omerbenamram/libyal-rs"
+repository = "https://github.com/omerbenamram/libyal-rs"
 license = "LGPL-3.0+"
 
 version = "0.1.3"

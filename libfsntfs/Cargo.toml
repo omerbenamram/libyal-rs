@@ -1,8 +1,8 @@
 [package]
 name = "libfsntfs-rs"
 description = "Ergonomic rust bindings for libfsntfs (https://github.com/libyal/libfsntfs)"
-homepage = "https://github.com/omerbenamram/libfsntfs-sys"
-repository = "https://github.com/omerbenamram/libfsntfs-sys"
+homepage = "https://github.com/omerbenamram/libyal-rs"
+repository = "https://github.com/omerbenamram/libyal-rs"
 license = "LGPL-3.0+"
 
 readme = "README.md"
