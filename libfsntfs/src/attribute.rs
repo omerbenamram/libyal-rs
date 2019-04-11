@@ -81,6 +81,7 @@ impl<'a> Debug for Attribute<'a> {
 
 #[derive(PartialOrd, PartialEq, Debug, Clone)]
 #[repr(C)]
+#[allow(overflowing_literals)]
 pub enum AttributeType {
     Unused = 0,
     StandardInformation = 16,
@@ -124,7 +125,7 @@ impl TryFrom<u32> for AttributeType {
             224 => Ok(AttributeType::Extended),
             240 => Ok(AttributeType::PropertySet),
             256 => Ok(AttributeType::LoggedUtilityStream),
-            4294967295 => Ok(AttributeType::EndOfAttributes),
+            4_294_967_295 => Ok(AttributeType::EndOfAttributes),
             _ => Err(Error::UnknownAttributeEnumVariant(value)),
         }
     }
