@@ -5,7 +5,7 @@ authors = ["Omer Ben-Amram <omerbenamram@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-libbfio-sys = {path = "../libbfio-sys"}
+libbfio-sys = "0.2.0"
 libyal-rs-common = "0.2.0"
 libcerror-sys = "0.2.0"
 chrono = "0.4.6"
