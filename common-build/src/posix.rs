@@ -6,15 +6,9 @@ use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
-/// Build the lib on posix platforms (using configure and make).
-/// This function will also add the needed folder to the `link-search` path.
-/// Return the "include" folder for the library (to be used by bindgen).
-pub fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
-    let target = lib_path.join("dist");
-
-    println!("building with prefix={}", target.display());
-
-    Command::new("sh")
+/// Synchronizes the local library dependencies.
+pub fn sync_libs(lib_path: &PathBuf) {
+    let status = Command::new("sh")
         .arg("synclibs.sh")
         .current_dir(&lib_path)
         .stderr(Stdio::inherit())
@@ -22,13 +16,25 @@ pub fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
         .status()
         .expect("synclibs failed");
 
-    Command::new("sh")
+    assert!(status.success(), "synclibs failed");
+}
+
+/// Build the lib on posix platforms (using configure and make).
+/// Note, this function will not sync dependencies. use `sync_libs` or `sync_and_build_lib`.
+/// This function will also add the needed folder to the `link-search` path.
+/// Return the "include" folder for the library (to be used by bindgen).
+pub fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
+    let target = lib_path.join("dist");
+
+    let status = Command::new("sh")
         .arg("autogen.sh")
         .current_dir(&lib_path)
         .stderr(Stdio::inherit())
         .stdout(Stdio::inherit())
         .status()
         .expect("autogen failed");
+
+    assert!(status.success(), "autogen failed");
 
     let mut configure_cmd = Command::new("sh");
 
@@ -43,22 +49,28 @@ pub fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
         configure_cmd.arg("--enable-shared=no");
     }
 
-    configure_cmd.status().expect("configure failed");
+    let status = configure_cmd.status().expect("configure failed");
 
-    Command::new("make")
+    assert!(status.success(), "configure failed");
+
+    let status = Command::new("make")
         .current_dir(&lib_path)
         .stderr(Stdio::inherit())
         .stdout(Stdio::inherit())
         .status()
         .expect("make failed");
 
-    Command::new("make")
+    assert!(status.success(), "make failed");
+
+    let status = Command::new("make")
         .arg("install")
         .current_dir(&lib_path)
         .stderr(Stdio::inherit())
         .stdout(Stdio::inherit())
         .status()
         .expect("make install failed");
+
+    assert!(status.success(), "make install failed");
 
     assert!(
         target.join("lib").exists(),

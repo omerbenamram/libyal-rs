@@ -1,21 +1,16 @@
+use encoding_rs_io::DecodeReaderBytesBuilder;
 use failure::{bail, Error};
 use std::env;
-use std::fs::{File, remove_dir_all};
+use std::fs::{remove_dir_all, File};
 use std::io;
 use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use walkdir::WalkDir;
-use encoding_rs_io::DecodeReaderBytesBuilder;
 
-/// Build the lib on windows (using msbuild and libyal's vstools).
-/// Require python to be installed.
-/// This function will also add the needed folder to the `link-search` path.
-/// Return the "include" folder for the library (to be used by bindgen).
-pub fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
-    let python_exec = env::var("PYTHON_SYS_EXECUTABLE").unwrap_or_else(|_| "python.exe".to_owned());
-
-    Command::new("powershell")
+/// Synchronizes the local library dependencies.
+pub fn sync_libs(lib_path: &PathBuf) {
+    let status = Command::new("powershell")
         .arg("-File")
         .arg("synclibs.ps1")
         .current_dir(&lib_path)
@@ -24,7 +19,18 @@ pub fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
         .status()
         .expect("synclibs failed");
 
-    Command::new("powershell")
+    assert!(status.success(), "synclibs failed");
+}
+
+/// Build the lib on windows (using msbuild and libyal's vstools).
+/// Note, this function will not sync dependencies. use `sync_libs` or `sync_and_build_lib`.
+/// Require python to be installed.
+/// This function will also add the needed folder to the `link-search` path.
+/// Return the "include" folder for the library (to be used by bindgen).
+pub fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
+    let python_exec = env::var("PYTHON_SYS_EXECUTABLE").unwrap_or_else(|_| "python.exe".to_owned());
+
+    let status = Command::new("powershell")
         .arg("-File")
         .arg("autogen.ps1")
         .current_dir(&lib_path)
@@ -33,19 +39,23 @@ pub fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
         .status()
         .expect("autogen failed");
 
+    assert!(status.success(), "autogen failed");
+
     // The folder might not exists from a previous build, but we don't care.
     let _ = remove_dir_all(&lib_path.join("vs2015"));
+
+    let vstools_path = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap()).parent().unwrap().join("vstools");
 
     let lib_name = lib_path.file_name().unwrap().to_string_lossy().into_owned();
 
     let py_convert_status = Command::new(&python_exec)
-        .arg("..\\..\\vstools\\scripts\\msvscpp-convert.py")
+        .arg(vstools_path.join("scripts").join("msvscpp-convert.py"))
         .arg("--extend-with-x64")
         .arg("--output-format")
         .arg("2015")
         .arg(format!("msvscpp\\{}.sln", lib_name))
         .current_dir(&lib_path)
-        .env("PYTHONPATH", "..\\..\\vstools")
+        .env("PYTHONPATH", vstools_path.into_os_string())
         .stderr(Stdio::inherit())
         .stdout(Stdio::inherit())
         .status();
@@ -62,7 +72,9 @@ pub fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
                 panic!(format!("Failed to convert the solution: {:?}", err));
             }
         }
-        Ok(_) => {}
+        Ok(status) => {
+            assert!(status.success(), "Failed to convert the solution");
+        }
     };
 
     let target = env::var("TARGET").unwrap();
@@ -88,7 +100,9 @@ pub fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
         msbuild.arg("/p:ConfigurationType=StaticLibrary");
     }
 
-    msbuild.status().expect("Building the solution failed");
+    // We do not check status here because the Python bindings might failed to build,
+    // but we don't care about that.
+    let _status = msbuild.status().expect("Building the solution failed");
 
     let build_dir = lib_path
         .join("vs2015")
