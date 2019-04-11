@@ -8,7 +8,6 @@ license = "LGPL-3.0+"
 version = "0.1.3"
 authors = ["Omer Ben-Amram <omerbenamram@gmail.com>"]
 edition = "2018"
-links = "libfsntfs"
 
 [build-dependencies]
 failure = "0.1.5"
