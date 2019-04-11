@@ -7,7 +7,7 @@
 	url = https://github.com/libyal/libbfio.git
 	branch = master
 [submodule "vstools"]
-	path = vstools
+	path = common-build/vstools
 	url = https://github.com/libyal/vstools.git
 [submodule "libcerror-sys/libcerror"]
 	path = libcerror-sys/libcerror
