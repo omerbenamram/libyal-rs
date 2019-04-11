@@ -12,7 +12,7 @@ links = "libfsntfs"
 
 [build-dependencies]
 failure = "0.1.5"
-libyal-rs-common-build = {path = "../common-build"}
+libyal-rs-common-build = "0.2.0"
 
 [features]
 
