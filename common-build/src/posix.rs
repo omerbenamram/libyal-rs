@@ -8,13 +8,15 @@ use std::process::{Command, Stdio};
 
 /// Synchronizes the local library dependencies.
 pub fn sync_libs(lib_path: &PathBuf) {
-    Command::new("sh")
+    let status = Command::new("sh")
         .arg("synclibs.sh")
         .current_dir(&lib_path)
         .stderr(Stdio::inherit())
         .stdout(Stdio::inherit())
         .status()
         .expect("synclibs failed");
+
+    assert!(status.success(), "synclibs failed");
 }
 
 /// Build the lib on posix platforms (using configure and make).
@@ -24,13 +26,15 @@ pub fn sync_libs(lib_path: &PathBuf) {
 pub fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
     let target = lib_path.join("dist");
 
-    Command::new("sh")
+    let status = Command::new("sh")
         .arg("autogen.sh")
         .current_dir(&lib_path)
         .stderr(Stdio::inherit())
         .stdout(Stdio::inherit())
         .status()
         .expect("autogen failed");
+
+    assert!(status.success(), "autogen failed");
 
     let mut configure_cmd = Command::new("sh");
 
@@ -45,22 +49,28 @@ pub fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
         configure_cmd.arg("--enable-shared=no");
     }
 
-    configure_cmd.status().expect("configure failed");
+    let status = configure_cmd.status().expect("configure failed");
 
-    Command::new("make")
+    assert!(status.success(), "configure failed");
+
+    let status = Command::new("make")
         .current_dir(&lib_path)
         .stderr(Stdio::inherit())
         .stdout(Stdio::inherit())
         .status()
         .expect("make failed");
 
-    Command::new("make")
+    assert!(status.success(), "make failed");
+
+    let status = Command::new("make")
         .arg("install")
         .current_dir(&lib_path)
         .stderr(Stdio::inherit())
         .stdout(Stdio::inherit())
         .status()
         .expect("make install failed");
+
+    assert!(status.success(), "make install failed");
 
     assert!(
         target.join("lib").exists(),

@@ -10,7 +10,7 @@ use walkdir::WalkDir;
 
 /// Synchronizes the local library dependencies.
 pub fn sync_libs(lib_path: &PathBuf) {
-    Command::new("powershell")
+    let status = Command::new("powershell")
         .arg("-File")
         .arg("synclibs.ps1")
         .current_dir(&lib_path)
@@ -18,6 +18,8 @@ pub fn sync_libs(lib_path: &PathBuf) {
         .stdout(Stdio::inherit())
         .status()
         .expect("synclibs failed");
+
+    assert!(status.success(), "synclibs failed");
 }
 
 /// Build the lib on windows (using msbuild and libyal's vstools).
@@ -28,7 +30,7 @@ pub fn sync_libs(lib_path: &PathBuf) {
 pub fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
     let python_exec = env::var("PYTHON_SYS_EXECUTABLE").unwrap_or_else(|_| "python.exe".to_owned());
 
-    Command::new("powershell")
+    let status = Command::new("powershell")
         .arg("-File")
         .arg("autogen.ps1")
         .current_dir(&lib_path)
@@ -36,6 +38,8 @@ pub fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
         .stdout(Stdio::inherit())
         .status()
         .expect("autogen failed");
+
+    assert!(status.success(), "autogen failed");
 
     // The folder might not exists from a previous build, but we don't care.
     let _ = remove_dir_all(&lib_path.join("vs2015"));
@@ -68,7 +72,9 @@ pub fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
                 panic!(format!("Failed to convert the solution: {:?}", err));
             }
         }
-        Ok(_) => {}
+        Ok(status) => {
+            assert!(status.success(), "Failed to convert the solution");
+        }
     };
 
     let target = env::var("TARGET").unwrap();
@@ -94,7 +100,9 @@ pub fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
         msbuild.arg("/p:ConfigurationType=StaticLibrary");
     }
 
-    msbuild.status().expect("Building the solution failed");
+    // We do not check status here because the Python bindings might failed to build,
+    // but we don't care about that.
+    let _status = msbuild.status().expect("Building the solution failed");
 
     let build_dir = lib_path
         .join("vs2015")
