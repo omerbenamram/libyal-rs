@@ -1,20 +1,19 @@
+[[example]]
+name = "file_attributes"
+path = "examples/file_attributes.rs"
+
 [package]
 name = "libfsntfs-rs"
 description = "Ergonomic rust bindings for libfsntfs (https://github.com/libyal/libfsntfs)"
 homepage = "https://github.com/omerbenamram/libyal-rs"
 repository = "https://github.com/omerbenamram/libyal-rs"
 license = "LGPL-3.0+"
-
 readme = "README.md"
-version = "0.2.1"
-authors = ["Omer Ben-Amram <omerbenamram@gmail.com>"]
+version = "0.2.2"
+authors = [ "Omer Ben-Amram <omerbenamram@gmail.com>",]
 edition = "2018"
 
-
 [dependencies]
-libfsntfs-sys = { path = "../libfsntfs-sys" , version = "0.2.1" }
-libbfio-rs = { path = "../libbfio" , version = "0.2.1" }
-libyal-rs-common = { path = "../common" , version = "0.2.1" }
 chrono = "0.4.6"
 time = "0.1.42"
 log = "0.4.6"
@@ -26,10 +25,16 @@ lazy_static = "1.3.0"
 
 [features]
 default = []
+dynamic_link = [ "libfsntfs-sys/dynamic_link", "libbfio-rs/dynamic_link",]
 
-# Use when building dynamic bindings.
-dynamic_link = ["libfsntfs-sys/dynamic_link", "libbfio-rs/dynamic_link"]
+[dependencies.libfsntfs-sys]
+path = "../libfsntfs-sys"
+version = "0.2.2"
 
-[[example]]
-name = "file_attributes"
-path = "examples/file_attributes.rs"
+[dependencies.libbfio-rs]
+path = "../libbfio"
+version = "0.2.2"
+
+[dependencies.libyal-rs-common]
+path = "../common"
+version = "0.2.2"
