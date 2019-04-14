@@ -53,15 +53,16 @@ def main():
             new_version = current_version.increment_patch().to_string()
             package_name = config["package"]["name"]
 
-            print(f"Current version of: {package_name} is {current_version}, updating to {new_version}")
+            print(f"Current version of: {package_name} is {current_version.to_string()}, updating to {new_version}")
 
             config["package"]["version"] = new_version
 
             # dependencies are updated in order in `LIBYAL_LIBRARIES_DIRECTORIES`,
             # which ensures the dependecy was updated and uploaded beforehand
-            for dependency in config["dependencies"]:
-                if dependency in LIBYAL_LIBRARIES_PACKAGES:
-                    config["dependencies"][dependency]["version"] = new_version
+            if config.get("dependencies"):
+                for dependency in config["dependencies"]:
+                    if dependency in LIBYAL_LIBRARIES_PACKAGES:
+                        config["dependencies"][dependency]["version"] = new_version
 
             new_config = config
 
@@ -70,7 +71,15 @@ def main():
         with open(os.path.join(d, "Cargo.toml"), "w") as t:
             toml.dump(new_config, t)
 
-        s = subprocess.run(shlex.split("cargo release --no-dev-version --skip-tag --skip-push"), cwd=d)
+        s = subprocess.run(shlex.split("git add --all"))
+        s.check_returncode()
+
+        s = subprocess.run(shlex.split("git commit -m \"bump {} version to {}\"".format(d, new_version)))
+        s.check_returncode()
+
+        s = subprocess.run(shlex.split("cargo release --no-dev-version --skip-tag --skip-push"), cwd=d,
+                           stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+        print(s.stdout)
         s.check_returncode()
 
     print("Pushing")
