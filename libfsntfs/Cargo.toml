@@ -9,7 +9,7 @@ homepage = "https://github.com/omerbenamram/libyal-rs"
 repository = "https://github.com/omerbenamram/libyal-rs"
 license = "LGPL-3.0+"
 readme = "README.md"
-version = "0.2.2"
+version = "0.2.3"
 authors = [ "Omer Ben-Amram <omerbenamram@gmail.com>",]
 edition = "2018"
 
@@ -29,12 +29,12 @@ dynamic_link = [ "libfsntfs-sys/dynamic_link", "libbfio-rs/dynamic_link",]
 
 [dependencies.libfsntfs-sys]
 path = "../libfsntfs-sys"
-version = "0.2.2"
+version = "0.2.3"
 
 [dependencies.libbfio-rs]
 path = "../libbfio"
-version = "0.2.2"
+version = "0.2.3"
 
 [dependencies.libyal-rs-common]
 path = "../common"
-version = "0.2.2"
+version = "0.2.3"
