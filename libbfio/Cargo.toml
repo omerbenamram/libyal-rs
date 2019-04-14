@@ -4,15 +4,11 @@ description = "Rust bindings for libbfio (https://github.com/libyal/libbfio)"
 homepage = "https://github.com/omerbenamram/libyal-rs"
 repository = "https://github.com/omerbenamram/libyal-rs"
 license = "LGPL-3.0+"
-
-version = "0.2.1"
-authors = ["Omer Ben-Amram <omerbenamram@gmail.com>"]
+version = "0.2.2"
+authors = [ "Omer Ben-Amram <omerbenamram@gmail.com>",]
 edition = "2018"
 
 [dependencies]
-libbfio-sys = { path = "../libbfio-sys", version = "0.2.1" }
-libyal-rs-common = { path = "../common", version = "0.2.1" }
-libcerror-sys = { path = "../libcerror-sys", version = "0.2.1" }
 chrono = "0.4.6"
 time = "0.1.42"
 log = "0.4.6"
@@ -22,8 +18,17 @@ failure = "0.1.5"
 tempdir = "0.3.7"
 
 [features]
-
 default = []
+dynamic_link = [ "libbfio-sys/dynamic_link",]
 
-# Use when building dynamic bindings.
-dynamic_link = ["libbfio-sys/dynamic_link"]
+[dependencies.libbfio-sys]
+path = "../libbfio-sys"
+version = "0.2.2"
+
+[dependencies.libyal-rs-common]
+path = "../common"
+version = "0.2.2"
+
+[dependencies.libcerror-sys]
+path = "../libcerror-sys"
+version = "0.2.2"
