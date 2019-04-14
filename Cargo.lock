@@ -236,7 +236,7 @@ version = "0.2.2"
 dependencies = [
  "chrono 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "libbfio-sys 0.2.2",
+ "libbfio-sys 0.2.3",
  "libcerror-sys 0.2.3",
  "libyal-rs-common 0.2.3",
  "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -246,7 +246,7 @@ dependencies = [
 
 [[package]]
 name = "libbfio-sys"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "libyal-rs-common-build 0.2.3",
