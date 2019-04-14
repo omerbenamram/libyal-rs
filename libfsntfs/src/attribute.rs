@@ -81,7 +81,6 @@ impl<'a> Debug for Attribute<'a> {
 
 #[derive(PartialOrd, PartialEq, Debug, Clone)]
 #[repr(C)]
-#[allow(overflowing_literals)]
 pub enum AttributeType {
     Unused = 0,
     StandardInformation = 16,
@@ -100,7 +99,7 @@ pub enum AttributeType {
     Extended = 224,
     PropertySet = 240,
     LoggedUtilityStream = 256,
-    EndOfAttributes = 4_294_967_295,
+    EndOfAttributes = 4_294_967_295u32 as isize,
 }
 
 impl TryFrom<u32> for AttributeType {
