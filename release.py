@@ -59,10 +59,11 @@ def main():
 
             # dependencies are updated in order in `LIBYAL_LIBRARIES_DIRECTORIES`,
             # which ensures the dependecy was updated and uploaded beforehand
-            if config.get("dependencies"):
-                for dependency in config["dependencies"]:
-                    if dependency in LIBYAL_LIBRARIES_PACKAGES:
-                        config["dependencies"][dependency]["version"] = new_version
+            for dependencies_section in ["dependencies", "build-dependencies", "dev-dependencies"]:
+                if config.get(dependencies_section):
+                    for dependency in config[dependencies_section]:
+                        if dependency in LIBYAL_LIBRARIES_PACKAGES:
+                            config[dependencies_section][dependency]["version"] = new_version
 
             new_config = config
 
