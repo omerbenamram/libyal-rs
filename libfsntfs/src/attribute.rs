@@ -99,7 +99,7 @@ pub enum AttributeType {
     Extended = 224,
     PropertySet = 240,
     LoggedUtilityStream = 256,
-    EndOfAttributes = 4_294_967_295,
+    EndOfAttributes = 4_294_967_295u32 as isize,
 }
 
 impl TryFrom<u32> for AttributeType {
@@ -124,7 +124,7 @@ impl TryFrom<u32> for AttributeType {
             224 => Ok(AttributeType::Extended),
             240 => Ok(AttributeType::PropertySet),
             256 => Ok(AttributeType::LoggedUtilityStream),
-            4294967295 => Ok(AttributeType::EndOfAttributes),
+            4_294_967_295 => Ok(AttributeType::EndOfAttributes),
             _ => Err(Error::UnknownAttributeEnumVariant(value)),
         }
     }
