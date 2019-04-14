@@ -71,6 +71,10 @@ def main():
         with open(os.path.join(d, "Cargo.toml"), "w") as t:
             toml.dump(new_config, t)
 
+        # this will update the lockfiles
+        s = subprocess.run(shlex.split("cargo check"))
+        s.check_returncode()
+
         s = subprocess.run(shlex.split("git add --all"))
         s.check_returncode()
 
