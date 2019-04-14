@@ -79,15 +79,15 @@ def main():
         s = subprocess.run(shlex.split("git add --all"))
         s.check_returncode()
 
-        s = subprocess.run(shlex.split("git commit -m \"bump {} version to {}\"".format(d, new_version)))
-        s.check_returncode()
-
-        s = subprocess.run(shlex.split("cargo release --no-dev-version --skip-tag --skip-push"), cwd=d,
+        s = subprocess.run(shlex.split("cargo publish --allow-dirty"), cwd=d,
                            stderr=subprocess.PIPE)
 
         # ignore already exists
         if b"already" not in s.stderr:
             s.check_returncode()
+
+    s = subprocess.run(shlex.split("git commit -m \"bump version to {}\"".format(new_version)))
+    s.check_returncode()
 
     print("Pushing")
     subprocess.run(shlex.split("git push"))
