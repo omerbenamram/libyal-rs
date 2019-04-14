@@ -237,7 +237,7 @@ dependencies = [
  "chrono 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "libbfio-sys 0.2.2",
- "libcerror-sys 0.2.2",
+ "libcerror-sys 0.2.3",
  "libyal-rs-common 0.2.3",
  "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "tempdir 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -259,7 +259,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "libcerror-sys"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "libyal-rs-common-build 0.2.3",
