@@ -10,7 +10,7 @@ mod windows;
 #[cfg(target_os = "windows")]
 pub use crate::windows::{build_lib, sync_libs};
 
-use fs_extra::dir::{copy_with_progress, CopyOptions, TransitProcessResult, TransitState};
+use fs_extra::dir::{copy, CopyOptions};
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
 use std::env;
@@ -49,15 +49,7 @@ pub fn get_lib_and_copy_to_out_dir(lib_name: &str) -> PathBuf {
     let copied_lib_path = random_build_dir.join(lib_name);
     let _ = std::fs::remove_dir_all(&copied_lib_path);
 
-    copy_with_progress(&lib_path, &random_build_dir, &CopyOptions::new(), |item| {
-        eprintln!(
-            "Copied: {:?}, no access: {:?}",
-            item.file_name,
-            item.state == TransitState::NoAccess
-        );
-
-        TransitProcessResult::ContinueOrAbort
-    })
+    copy(&lib_path, &random_build_dir, &CopyOptions::new())
     .expect(&format!(
         "Error while copying sources from {:?} to `OUT_DIR` {:?}",
         &lib_path, &random_build_dir

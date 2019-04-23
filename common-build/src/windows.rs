@@ -11,6 +11,9 @@ use walkdir::WalkDir;
 /// Synchronizes the local library dependencies.
 pub fn sync_libs(lib_path: &PathBuf) {
     let status = Command::new("powershell")
+        .arg("-NoProfile")
+        .arg("-ExecutionPolicy")
+        .arg("Bypass")
         .arg("-File")
         .arg("synclibs.ps1")
         .current_dir(&lib_path)
@@ -31,6 +34,9 @@ pub fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
     let python_exec = env::var("PYTHON_SYS_EXECUTABLE").unwrap_or_else(|_| "python.exe".to_owned());
 
     let status = Command::new("powershell")
+        .arg("-NoProfile")
+        .arg("-ExecutionPolicy")
+        .arg("Bypass")
         .arg("-File")
         .arg("autogen.ps1")
         .current_dir(&lib_path)
