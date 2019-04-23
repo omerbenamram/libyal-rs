@@ -19,3 +19,5 @@ cc = "1.0.35"
 encoding_rs = "0.8.17"
 encoding_rs_io = "0.1.6"
 walkdir = "2.2.7"
+winapi = { version = "0.3", features = ["fileapi"] }
+widestring = "0.4"

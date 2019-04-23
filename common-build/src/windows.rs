@@ -7,6 +7,37 @@ use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use walkdir::WalkDir;
+use widestring::{WideCString, WideCStr};
+use winapi::um::fileapi::GetShortPathNameW;
+
+fn get_short_path_name(path: &PathBuf) -> Result<PathBuf, Error> {
+    let long_path = WideCString::from_os_str(path.as_os_str())?;
+    let mut short_path_buf: Vec<u16> = Vec::new();
+
+    short_path_buf.resize(long_path.as_slice_with_nul().len(), 0);
+
+    let ret_val = unsafe {
+        GetShortPathNameW(
+            long_path.as_ptr(),
+            short_path_buf.as_mut_ptr(),
+            short_path_buf.len() as u32,
+        )
+    };
+
+    if ret_val == 0 {
+        Err(io::Error::last_os_error().into())
+    } else {
+        let number_of_tchars_in_buffer = ret_val;
+        let slice_of_buffer_with_tchars = &short_path_buf[..(number_of_tchars_in_buffer + 1) as usize];
+        let short_path_as_os_string = WideCStr::from_slice_with_nul(slice_of_buffer_with_tchars)?.to_string_lossy();
+
+        // Remove UNC prefix.
+        let short_path_as_os_string = short_path_as_os_string.replace("\\\\?\\", "");
+
+        Ok(PathBuf::from(short_path_as_os_string))
+    }
+
+}
 
 /// Synchronizes the local library dependencies.
 pub fn sync_libs(lib_path: &PathBuf) {
@@ -32,6 +63,9 @@ pub fn sync_libs(lib_path: &PathBuf) {
 /// Return the "include" folder for the library (to be used by bindgen).
 pub fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
     let python_exec = env::var("PYTHON_SYS_EXECUTABLE").unwrap_or_else(|_| "python.exe".to_owned());
+
+    // MSBuild doesn't work with UNC.
+    let short_lib_path = get_short_path_name(&lib_path).unwrap();
 
     let status = Command::new("powershell")
         .arg("-NoProfile")
@@ -59,10 +93,11 @@ pub fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
     let py_convert_status = Command::new(&python_exec)
         .arg(vstools_path.join("scripts").join("msvscpp-convert.py"))
         .arg("--extend-with-x64")
+        .arg("--no_python_dll")
         .arg("--output-format")
         .arg("2015")
         .arg(format!("msvscpp\\{}.sln", lib_name))
-        .current_dir(&lib_path)
+        .current_dir(&short_lib_path)
         .env("PYTHONPATH", vstools_path.into_os_string())
         .stderr(Stdio::inherit())
         .stdout(Stdio::inherit())
@@ -100,7 +135,7 @@ pub fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
         .arg(format!("vs2015\\{}.sln", lib_name))
         .arg("/p:PlatformToolset=v141")
         .arg(format!("/p:Platform={}", msbuild_platform))
-        .current_dir(&lib_path)
+        .current_dir(&short_lib_path)
         .stderr(Stdio::inherit())
         .stdout(Stdio::inherit());
 
@@ -108,9 +143,7 @@ pub fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
         msbuild.arg("/p:ConfigurationType=StaticLibrary");
     }
 
-    // We do not check status here because the Python bindings might failed to build,
-    // but we don't care about that.
-    let _status = msbuild.status().expect("Building the solution failed");
+    assert!(msbuild.status().expect("msbuild should be found").success(), "msbuild failed");
 
     let build_dir = lib_path
         .join("vs2015")
@@ -146,7 +179,8 @@ pub fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
         utf16le_to_utf8(&h_file_path).unwrap();
     }
 
-    let include_folder_path = lib_path.join("include");
+    // Seems like bindgen / LLVM doesn't like UNC either.
+    let include_folder_path = short_lib_path.join("include");
 
     include_folder_path
 }
