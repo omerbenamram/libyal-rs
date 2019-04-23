@@ -38,7 +38,8 @@ pub fn get_lib_and_copy_to_out_dir(lib_name: &str) -> PathBuf {
 
     let rand_folder_name: String = thread_rng().sample_iter(&Alphanumeric).take(6).collect();
 
-    let build_out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
+    // Output dir might be quite nested, so use wide paths instead of regular paths.
+    let build_out_dir = PathBuf::from(format!("\\\\?\\{}", env::var("OUT_DIR").unwrap()));
 
     // We have to use a random build dir because multiple builds of the same lib might happen at the same time.
     let random_build_dir = build_out_dir.join(rand_folder_name);
