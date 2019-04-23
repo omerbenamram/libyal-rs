@@ -111,7 +111,9 @@ pub fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
         msbuild.arg("/p:ConfigurationType=StaticLibrary");
     }
 
-    assert!(msbuild.status().expect("msbuild should be found").success(), "msbuild failed");
+    // We do not check status here because the Python bindings might failed to build,
+    // but we don't care about that.
+    let _status = msbuild.status().expect("Building the solution failed");
 
     let build_dir = lib_path
         .join("vs2015")
