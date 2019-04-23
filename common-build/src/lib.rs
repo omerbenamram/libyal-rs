@@ -10,12 +10,12 @@ mod windows;
 #[cfg(target_os = "windows")]
 pub use crate::windows::{build_lib, sync_libs};
 
-use std::env;
-use std::path::PathBuf;
-use fs_extra::dir::{copy, CopyOptions};
-use rand::{thread_rng, Rng};
+use fs_extra::dir::{copy_with_progress, CopyOptions, TransitProcessResult, TransitState};
 use rand::distributions::Alphanumeric;
+use rand::{thread_rng, Rng};
+use std::env;
 use std::fs::{create_dir, create_dir_all};
+use std::path::PathBuf;
 
 /// Sync dependencies and build the lib.
 /// See `build_lib` for more.
@@ -36,10 +36,7 @@ pub fn get_lib_and_copy_to_out_dir(lib_name: &str) -> PathBuf {
             PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap()).join(lib_name)
         };
 
-    let rand_folder_name: String = thread_rng()
-        .sample_iter(&Alphanumeric)
-        .take(6)
-        .collect();
+    let rand_folder_name: String = thread_rng().sample_iter(&Alphanumeric).take(6).collect();
 
     let build_out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
 
@@ -51,8 +48,19 @@ pub fn get_lib_and_copy_to_out_dir(lib_name: &str) -> PathBuf {
     let copied_lib_path = random_build_dir.join(lib_name);
     let _ = std::fs::remove_dir_all(&copied_lib_path);
 
-    copy(&lib_path, &random_build_dir, &CopyOptions::new())
-        .expect(&format!("Error while copying sources from {:?} to `OUT_DIR` {:?}", &lib_path, &random_build_dir));
+    copy_with_progress(&lib_path, &random_build_dir, &CopyOptions::new(), |item| {
+        eprintln!(
+            "Copied: {:?}, no access: {:?}",
+            item.file_name,
+            item.state == TransitState::NoAccess
+        );
+
+        TransitProcessResult::ContinueOrAbort
+    })
+    .expect(&format!(
+        "Error while copying sources from {:?} to `OUT_DIR` {:?}",
+        &lib_path, &random_build_dir
+    ));
 
     copied_lib_path
 }
