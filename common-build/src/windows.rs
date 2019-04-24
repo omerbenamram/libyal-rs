@@ -147,7 +147,6 @@ pub fn build_lib(lib_path: PathBuf, shared: bool) -> PathBuf {
         utf16le_to_utf8(&h_file_path).unwrap();
     }
 
-    // Seems like bindgen / LLVM doesn't like UNC either.
     let include_folder_path = lib_path.join("include");
 
     include_folder_path

@@ -38,7 +38,6 @@ pub fn get_lib_and_copy_to_out_dir(lib_name: &str) -> PathBuf {
 
     let rand_folder_name: String = thread_rng().sample_iter(&Alphanumeric).take(6).collect();
 
-    // Output dir might be quite nested, so use wide paths instead of regular paths.
     let build_out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
 
     // We have to use a random build dir because multiple builds of the same lib might happen at the same time.
@@ -49,8 +48,7 @@ pub fn get_lib_and_copy_to_out_dir(lib_name: &str) -> PathBuf {
     let copied_lib_path = random_build_dir.join(lib_name);
     let _ = std::fs::remove_dir_all(&copied_lib_path);
 
-    copy(&lib_path, &random_build_dir, &CopyOptions::new())
-    .expect(&format!(
+    copy(&lib_path, &random_build_dir, &CopyOptions::new()).expect(&format!(
         "Error while copying sources from {:?} to `OUT_DIR` {:?}",
         &lib_path, &random_build_dir
     ));
