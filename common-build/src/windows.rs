@@ -7,8 +7,6 @@ use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use walkdir::WalkDir;
-use widestring::{WideCString, WideCStr};
-use winapi::um::fileapi::GetShortPathNameW;
 
 /// Synchronizes the local library dependencies.
 pub fn sync_libs(lib_path: &PathBuf) {
