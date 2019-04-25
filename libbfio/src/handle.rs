@@ -255,7 +255,9 @@ impl Handle {
         let mut handle = ptr::null_mut();
         let mut error = ptr::null_mut();
 
-        let io_handle = IoHandle::file(f.map_err(|e| Error::FailedToOpenFile(e))?);
+        let io_handle = f
+            .and_then(IoHandle::file)
+            .map_err(|e| Error::FailedToOpenFile(e))?;
 
         // Allocate the fat pointer on the heap, because passing it over ffi boundary is lossy.
         let heap_ptr = Box::into_raw(Box::new(io_handle));

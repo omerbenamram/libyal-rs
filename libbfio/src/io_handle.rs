@@ -9,7 +9,7 @@ use std::fs::File;
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::os::raw::c_int;
 use std::path::Path;
-use std::slice;
+use std::{slice, io};
 
 pub trait RwSeek: Read + Write + Seek {}
 impl<T: Read + Write + Seek> RwSeek for T {}
@@ -17,14 +17,18 @@ impl<T: Read + Write + Seek> RwSeek for T {}
 pub struct IoHandle {
     inner: Box<dyn RwSeek>,
     is_open: bool,
+    size: u64,
 }
 
 impl IoHandle {
-    pub fn file(inner: File) -> Self {
-        IoHandle {
+    pub fn file(inner: File) -> io::Result<Self> {
+        let metadata = inner.metadata()?;
+
+        Ok(IoHandle {
             inner: Box::new(inner) as Box<dyn RwSeek>,
-            is_open: true
-        }
+            is_open: true,
+            size: metadata.len(),
+        })
     }
 }
 
@@ -157,22 +161,6 @@ pub unsafe extern "C" fn io_handle_get_size(
     error: *mut LibbfioErrorRefMut,
 ) -> c_int {
     trace!("io_handle_get_size");
-    match (*io_handle).inner.stream_len() {
-        Ok(count) => {
-            *size = count;
-            return 1;
-        }
-        Err(e) => {
-            libcerror_error_set(
-                error as _,
-                IO_ERR,
-                LIBCERROR_IO_ERROR_LIBCERROR_IO_ERROR_SEEK_FAILED as i32,
-                CString::new("%s.").unwrap().into_raw(),
-                CString::new(format!("io_handle_get_size: {:?}", e))
-                    .unwrap()
-                    .into_raw(),
-            );
-            return 0;
-        }
-    }
+
+    (*io_handle).size as c_int
 }
