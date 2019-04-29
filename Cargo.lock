@@ -267,14 +267,14 @@ dependencies = [
 
 [[package]]
 name = "libfsntfs-rs"
-version = "0.2.4"
+version = "0.2.5"
 dependencies = [
  "chrono 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "env_logger 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libbfio-rs 0.2.5",
- "libfsntfs-sys 0.2.4",
+ "libfsntfs-sys 0.2.5",
  "libyal-rs-common 0.2.5",
  "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "time 0.1.42 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -282,7 +282,7 @@ dependencies = [
 
 [[package]]
 name = "libfsntfs-sys"
-version = "0.2.4"
+version = "0.2.5"
 dependencies = [
  "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "libyal-rs-common-build 0.2.5",
