@@ -14,7 +14,7 @@ use std::convert::TryFrom;
 
 use crate::error::Error::FailedToOpenFile;
 use std::fs::{File, OpenOptions};
-use std::io::{Read, Seek, SeekFrom, Write};
+use std::io::{Read, Seek, SeekFrom, Write, BufReader};
 use std::os::raw::c_int;
 use std::path::Path;
 use std::{io, ptr};
@@ -245,6 +245,14 @@ extern "C" {
 }
 
 impl Handle {
+    pub fn open_file_buffered(path: impl AsRef<Path>) -> Result<Handle, Error> {
+        let io_handle = IoHandle::read_seek(BufReader::new(
+            File::open(path).map_err(|e| Error::FailedToOpenFile(e))?)
+        );
+
+        Handle::from_io_handle(io_handle, LibbfioAccessFlags::Read)
+    }
+
     pub fn open_file(path: impl AsRef<Path>, flags: LibbfioAccessFlags) -> Result<Handle, Error> {
         let f = match flags {
             LibbfioAccessFlags::Read => OpenOptions::new().read(true).open(path),
@@ -252,10 +260,14 @@ impl Handle {
             LibbfioAccessFlags::Truncate => OpenOptions::new().create(true).open(path),
         };
 
+        let io_handle = IoHandle::file(f.map_err(|e| Error::FailedToOpenFile(e))?);
+
+        Handle::from_io_handle(io_handle, flags)
+    }
+
+    pub fn from_io_handle(io_handle: IoHandle, flags: LibbfioAccessFlags) -> Result<Handle, Error> {
         let mut handle = ptr::null_mut();
         let mut error = ptr::null_mut();
-
-        let io_handle = IoHandle::file(f.map_err(|e| Error::FailedToOpenFile(e))?);
 
         // Allocate the fat pointer on the heap, because passing it over ffi boundary is lossy.
         let heap_ptr = Box::into_raw(Box::new(io_handle));

@@ -9,7 +9,7 @@ use std::fs::File;
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::os::raw::c_int;
 use std::path::Path;
-use std::slice;
+use std::{slice, io};
 
 pub trait RwSeek: Read + Write + Seek {}
 impl<T: Read + Write + Seek> RwSeek for T {}
@@ -23,7 +23,42 @@ impl IoHandle {
     pub fn file(inner: File) -> Self {
         IoHandle {
             inner: Box::new(inner) as Box<dyn RwSeek>,
-            is_open: true
+            is_open: true,
+        }
+    }
+
+    pub fn read_seek(stream: impl  Read + Seek + 'static) -> Self {
+        struct ReaderSeeker<T>(T);
+
+        impl<T: Read + Seek> Read for ReaderSeeker<T> {
+            fn read(&mut self, buf: &mut [u8]) -> Result<usize, io::Error> {
+                self.0.read(buf)
+            }
+        }
+
+        impl<T: Read + Seek> Seek for ReaderSeeker<T> {
+            fn seek(&mut self, pos: SeekFrom) -> Result<u64, io::Error> {
+                self.0.seek(pos)
+            }
+
+            fn stream_len(&mut self) -> Result<u64, io::Error> {
+                self.0.stream_len()
+            }
+        }
+
+        impl<T: Read + Seek> Write for ReaderSeeker<T> {
+            fn write(&mut self, buf: &[u8]) -> Result<usize, io::Error> {
+                Err(io::Error::new(io::ErrorKind::PermissionDenied, "Read-only stream"))
+            }
+
+            fn flush(&mut self) -> Result<(), io::Error> {
+                Err(io::Error::new(io::ErrorKind::PermissionDenied, "Read-only stream"))
+            }
+        }
+
+        IoHandle {
+            inner: Box::new(ReaderSeeker(stream)) as Box<dyn RwSeek>,
+            is_open: true,
         }
     }
 }
